@@ -36,6 +36,16 @@ class RadarrClient:
         """returns list of all added movies"""
         return self._get("/movie", param)
 
+    def movie_isAvailable(self, tmdbId: str):
+        """checks if movie is downloaded and available"""
+        resp = self._get_added_movies({"tmdbId": tmdbId})
+        if not resp:
+            logger.info("Movie is not added: not available")
+            return False
+        else:
+            logger.info(f"movie is added, Available:{resp[0]['isAvailable']}")
+            return resp[0]['isAvailable']
+
     def _post(self, endpoint: str, data=None):
         """request POST method that's safe and catches most error"""
         try:
@@ -69,7 +79,7 @@ class RadarrClient:
             response.raise_for_status()
             data = response.json()
             if not data:
-                logger.error("GET did not return any data")
+                logger.info("GET did not return any data")
                 return None
             return data
         
@@ -109,9 +119,9 @@ class RadarrClient:
                 "searchForMovie": True
             }
         }
-        movies = self._get_added_movies(param={"tmdbId": tmdbId})
-        if movies:
-            logger.info("Movie is already added")
+        movie = self._get_added_movies({"tmdbId": tmdbId})
+        if movie:
+            logger.info("Movie is already added, aborting")
             return None
 
         resp = self._post("/movie", body)
@@ -121,11 +131,14 @@ if __name__ == "__main__":
     r = RadarrClient()
     print(r.API_key)
     print(r.headers)
-    resp = r.search_movie("Inception")
+    resp = r.search_movie("Interstellar")
     
     movie = resp[0]
     print(r.rootFolder)
-    r.add_movie(movie["title"], qualityProfileId= 1, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
+    r.add_movie(movie["title"], qualityProfileId= 4, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
+    resp = r.search_movie("inception")
+    movie = resp[0]
+    r.movie_isAvailable(movie["tmdbId"])
     #print(r._get_added_movies())
     #r._post("/movies", None)
     #r.add_movie("Inception",0, 54678,78954, "/movies")
