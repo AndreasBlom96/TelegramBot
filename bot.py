@@ -2,7 +2,7 @@ import asyncio
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler
 import logging
-import requests
+from radarr import RadarrClient
 token_text = "sacredtexts.txt"
 
 logging.basicConfig(
@@ -97,7 +97,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 if __name__== "__main__":
     application = ApplicationBuilder().token(getToken(token_text)).build()
     
-    conv_handler = ConversationHandler(g
+    conv_handler = ConversationHandler(
         entry_points= [CommandHandler('get', entry)],
         states={
             CHOICE: [MessageHandler(filters.Regex("^(movie|series)$"), name_of_movie)],
