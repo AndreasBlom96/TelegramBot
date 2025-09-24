@@ -127,6 +127,21 @@ class RadarrClient:
         resp = self._post("/movie", body)
         return resp
 
+    def movie_status(self, tmdbId: str):
+        logger.info("Checking status for movie: %s", tmdbId)
+        movie = self._get_added_movies({"tmdbId": tmdbId})
+        if not movie:
+            logger.info("movie %s is not added", tmdbId)
+            return "not added"
+        
+        has_file = movie[0]["hasFile"]
+        if has_file:
+            return "OK"
+        
+        #add logic for finding the movie in the queue?
+
+        return "missing"
+
 if __name__ == "__main__":
     r = RadarrClient()
     print(r.API_key)
@@ -134,11 +149,14 @@ if __name__ == "__main__":
     resp = r.search_movie("Interstellar")
     
     movie = resp[0]
-    print(r.rootFolder)
+    print(r.movie_status(movie["tmdbId"]))
+    print(movie.keys())
     r.add_movie(movie["title"], qualityProfileId= 4, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
+    
     resp = r.search_movie("inception")
     movie = resp[0]
     r.movie_isAvailable(movie["tmdbId"])
+    
     #print(r._get_added_movies())
     #r._post("/movies", None)
     #r.add_movie("Inception",0, 54678,78954, "/movies")
