@@ -1,6 +1,11 @@
 import requests
 import logging
 
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
 logger = logging.getLogger(__name__)
 
 def getApiKey():
@@ -12,29 +17,45 @@ def getApiKey():
 
 class RadarrClient:
 
-    base_url = "http://localhost:7878/api/v3"
-    API_key = ""
-    headers = {}
-
-    def __init__(self, host="localhost"):
+    def __init__(self, host="localhost", port="7878"):
         self.API_key = getApiKey()
-        self.base_url = f"http://{host}:7878/api/v3"
+        self.base_url = f"http://{host}:{port}/api/v3"
         self.headers = {"X-Api-Key": self.API_key}
-
-    def _check_response(self, response: requests.Response):
-        try:
-            response.raise_for_status()
-            data = response.json()
-
-            if not data:
-                logger.error("response Empty")
-                return None
-            return data
-        
-        except requests.exceptions.RequestException as e:
-            logger.error("response is invalid/failed")
-            return None
+        self.rootFolder = self._getRootFolder()
     
+    def _getRootFolder(self):
+        response = self._get("/rootfolder")
+
+        if not response:
+            logger.info("could not find rootfolder")
+            return None
+        else:
+            return response[0]['path']
+
+    def _get_added_movies(self, param: str=None):
+        """returns list of all added movies"""
+        return self._get("/movie", param)
+
+    def _post(self, endpoint: str, data=None):
+        """request POST method that's safe and catches most error"""
+        try:
+            response = requests.post(
+                url= f"{self.base_url}{endpoint}",
+                json= data,
+                headers= self.headers
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+        
     def _get(self, endpoint: str, params=None):
         """request get method that is safe and catches most errors"""
 
@@ -46,7 +67,6 @@ class RadarrClient:
                 timeout=10
             )
             response.raise_for_status()
-
             data = response.json()
             if not data:
                 logger.error("GET did not return any data")
@@ -63,7 +83,6 @@ class RadarrClient:
             logger.error(f"unexpected error: {e}")
         return None
 
-
     def search_movie(self, query: str):
         """Search for a movie by title"""
         endpoint = "/movie/lookup"
@@ -71,8 +90,43 @@ class RadarrClient:
         output = self._get(endpoint, {"term": query})
         return output
 
+    def add_movie(self, title: str, qualityProfileId: int, tmdbId: int, rootFolderPath: str, monitored: bool=True,
+     minimumAvailability: str="announced", isAvailable: bool=True ):
+        """Adds movie to Radarr and starts"""
+
+        logger.info("adding movie to radarr: %s", title)
+        #create json body
+        body = {
+            "title": title,
+            "tmdbId": tmdbId,
+            "qualityProfileId": qualityProfileId,
+            "monitored": monitored,
+            "minimumAvailability": minimumAvailability,
+            "isAvailable": isAvailable,
+            "rootFolderPath": rootFolderPath,
+            "addOptions": {
+                "monitor": "movieOnly",
+                "searchForMovie": True
+            }
+        }
+        movies = self._get_added_movies(param={"tmdbId": tmdbId})
+        if movies:
+            logger.info("Movie is already added")
+            return None
+
+        resp = self._post("/movie", body)
+        return resp
+
 if __name__ == "__main__":
     r = RadarrClient()
     print(r.API_key)
     print(r.headers)
-    r.search_movie("inception")
+    resp = r.search_movie("Inception")
+    
+    movie = resp[0]
+    print(r.rootFolder)
+    r.add_movie(movie["title"], qualityProfileId= 1, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
+    #print(r._get_added_movies())
+    #r._post("/movies", None)
+    #r.add_movie("Inception",0, 54678,78954, "/movies")
+    
