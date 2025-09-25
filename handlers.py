@@ -61,8 +61,25 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         current_index = (current_index+1) % (len(context.user_data["movies"]))
     elif action == "prev":
         current_index = (current_index-1) % (len(context.user_data["movies"]))
+    elif action == "add":
+        await query.edit_message_caption(
+            caption=f"Nice",
+            reply_markup= None
+        )
+        return MOVIE
     else:
-        context.user_data["selected_tmdbID"] = context.user_data["movies"][current_index]["tmdbId"]
+        context.user_data["selected_index"] = current_index
+
+        keyboard = [
+            [
+                InlineKeyboardButton(text="yes", callback_data=f"add_{current_index}"),
+                InlineKeyboardButton(text="No", callback_data=f"next_-1")
+            ]
+        ]
+        await query.edit_message_caption(
+            caption=f"you selected {context.user_data["movies"][current_index]["title"]}. Are you sure?",
+            reply_markup= InlineKeyboardMarkup(keyboard)
+        )
         return MOVIE
 
     keyboard = [
@@ -77,6 +94,14 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     movie = context.user_data["movies"][current_index]
     await query.edit_message_media(media=InputMediaPhoto(movie["images"][0]["remoteUrl"]))
     await query.edit_message_caption(f"{movie["title"]}, year: {movie["year"]}", reply_markup=markup)
+
+async def handle_movie_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+
+    await query.answer()
+    action = query.data.split("_")[0]
+    if action=="add":
+        print("add")
 
 async def entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Entry of conversation!"""
@@ -136,9 +161,9 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return MOVIE
 
-async def quality_of_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add the movie to radarr"""
-    movie_number = int(update.message.text)
+    movie_number = context.user_data["selected_index"]
     movie = context.user_data["movies"][movie_number]
     user = update.message.from_user
     context.user_data["radarrClient"].add_movie(title=movie["title"], tmdbId=movie["tmdbId"], rootFolderPath=context.user_data["radarrClient"].rootFolder, qualityProfileId=4)
@@ -146,9 +171,7 @@ async def quality_of_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_html(
         text = "Adding movie"
     )
-    await update.message.reply_photo(
-        movie["images"][0]["remoteUrl"]
-    )
+
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -169,7 +192,7 @@ if __name__== "__main__":
         states={
             CHOICE: [MessageHandler(filters.Regex("^(movie|series)$"), name_of_movie)],
             SELECT: [MessageHandler(filters.TEXT, select_movie)],
-            MOVIE: [MessageHandler(filters.TEXT, quality_of_movie)],
+            MOVIE: [MessageHandler(filters.TEXT,callback=add_movie)],
             QUALITY: [MessageHandler(filters.Regex("^(1080p|720p)$"), cancel)]
         },
         fallbacks= [CommandHandler('cancel', cancel)]
