@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 #get secret stuff from hidden file...
 def getToken(fileName):
     with open(fileName, "r") as file:
-        content = file.readline()
+        content = file.readline().strip()
         #print(content)
         return content
+    logger.error("Could not open txt file with bot token")
+    return None
 
 #Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,10 +47,12 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 #conversations
-CHOICE, MOVIE, QUALITY = range(3)
+CHOICE, MOVIE, SELECT, QUALITY = range(4)
 async def entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Entry of conversation!"""
     reply_keyboard = [["movie", "series", "cancel"]]
+    r = RadarrClient()
+    context.user_data["radarrClient"] = r
     await update.message.reply_html(
         text= "Do you want a movie or series?",
         reply_markup= ReplyKeyboardMarkup(
@@ -67,6 +71,13 @@ async def name_of_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "What is the name of the movie do you want?",
         reply_markup=ReplyKeyboardRemove()
     )
+    return SELECT
+
+async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Gives the user movies to select from"""
+    movies = context.user_data["radarrClient"].search_movie(update.message.text)
+    context.user_data["movies"] = movies
+
     return MOVIE
 
 async def quality_of_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -101,6 +112,7 @@ if __name__== "__main__":
         entry_points= [CommandHandler('get', entry)],
         states={
             CHOICE: [MessageHandler(filters.Regex("^(movie|series)$"), name_of_movie)],
+            SELECT: [MessageHandler(filters.TEXT, select_movie)],
             MOVIE: [MessageHandler(filters.TEXT, quality_of_movie)],
             QUALITY: [MessageHandler(filters.Regex("^(1080p|720p)$"), cancel)]
         },
