@@ -15,7 +15,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
-#get secret stuff from hidden file...
+#help functions
 def getToken(fileName):
     with open(fileName, "r") as file:
         content = file.readline().strip()
@@ -24,14 +24,20 @@ def getToken(fileName):
     logger.error("Could not open txt file with bot token")
     return None
 
+def get_user(update: Update):
+    if update.message:
+        return update.message.from_user
+    elif update.callback_query:
+        return update.callback_query.from_user
+
 #Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Hello! to start asking for a movie, write /get")
+        text="Hello! to start asking for a movie, write /movie")
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text= "Write command /get to start adding movie")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text= "Write command /movie to start adding movie")
 
 async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text_caps = ' '.join(context.args).upper()
@@ -44,10 +50,7 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
-
-#conversations
-CHOICE, MOVIE, SELECT, QUALITY = range(4)
-
+#Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
@@ -61,13 +64,19 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         current_index = (current_index+1) % (len(context.user_data["movies"]))
     elif action == "prev":
         current_index = (current_index-1) % (len(context.user_data["movies"]))
+    elif action == "cancel":
+        await query.edit_message_caption(
+            caption="Canceling request, bye bye",
+        )
+        await query.delete_message()
+        return await cancel(update, context)
     elif action == "add":
         await query.edit_message_caption(
             caption=f"Nice",
             reply_markup= None
         )
-        return MOVIE
-    else:
+        return await add_movie(update, context)
+    elif action == "select":
         context.user_data["selected_index"] = current_index
 
         keyboard = [
@@ -80,51 +89,52 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             caption=f"you selected {context.user_data["movies"][current_index]["title"]}. Are you sure?",
             reply_markup= InlineKeyboardMarkup(keyboard)
         )
-        return MOVIE
+        return SELECT
+    elif action == "movie":
+        await query.edit_message_text(
+            text= "What movie do you want?",
+            reply_markup=None
+        )
+        return None
 
     keyboard = [
         [
         InlineKeyboardButton(text="select",callback_data= f"select_{current_index}"),
         InlineKeyboardButton(text="next", callback_data=f"next_{current_index}"),
-        InlineKeyboardButton(text="prev", callback_data=f"prev_{current_index}")
+        InlineKeyboardButton(text="prev", callback_data=f"prev_{current_index}"),
+        InlineKeyboardButton(text="cancel", callback_data=f"cancel_{current_index}")
         ]
     ]
     markup = InlineKeyboardMarkup(keyboard)
+    default_photo = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
+    photo_url = default_photo
 
     movie = context.user_data["movies"][current_index]
-    await query.edit_message_media(media=InputMediaPhoto(movie["images"][0]["remoteUrl"]))
-    await query.edit_message_caption(f"{movie["title"]}, year: {movie["year"]}", reply_markup=markup)
+    
+    if movie["images"]:
+        photo_url = movie["images"][0]["remoteUrl"]
 
-async def handle_movie_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
+    overview = movie["overview"]
+    if len(overview) > 100:
+        overview[:97] + "..."
 
-    await query.answer()
-    action = query.data.split("_")[0]
-    if action=="add":
-        print("add")
+    await query.edit_message_media(media=InputMediaPhoto(photo_url))
+    await query.edit_message_caption(
+        f'{movie["title"]}, year: {movie["year"]} \n\n{movie["overview"]}', 
+        reply_markup=markup
+        )
 
-async def entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#conversations
+ENTRY, SELECT = range(2)
+
+async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Entry of conversation!"""
-    reply_keyboard = [["movie", "series", "cancel"]]
+    logger.info("Entry of conversation")
     r = RadarrClient()
     context.user_data["radarrClient"] = r
     await update.message.reply_html(
-        text= "Do you want a movie or series?",
-        reply_markup= ReplyKeyboardMarkup(
-            reply_keyboard, 
-            one_time_keyboard=True,
-            input_field_placeholder= "movie or series?"
-        )
-    )
-    return CHOICE
-
-async def name_of_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Get the movie name!"""
-    user = update.message.from_user
-    logger.info("User %s chose a %s.", user.first_name, update.message.text)
-    await update.message.reply_html(
-        text = "What is the name of the movie do you want?",
-        reply_markup=ReplyKeyboardRemove()
+        text= "what movie do you want to add?",
+        reply_markup= None
     )
     return SELECT
 
@@ -135,9 +145,9 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not movies:
         logger.info("found no search result for %s", update.message.text)
         await update.message.reply_html(
-            text="Coulnd find any movies"
+            text=f"didnt find any movies with query: {update.message.text}"
         )
-        return CHOICE
+        return SELECT
     
     context.user_data["movies"] = movies
     logger.info("found %s search result for movie %s", len(movies),update.message.text)
@@ -148,52 +158,63 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
         InlineKeyboardButton(text="select",callback_data= f"select_{index}"),
         InlineKeyboardButton(text="next", callback_data=f"next_{index}"),
-        InlineKeyboardButton(text="prev", callback_data=f"prev_{index}")
+        InlineKeyboardButton(text="prev", callback_data=f"prev_{index}"),
+        InlineKeyboardButton(text="cancel", callback_data=f"cancel_{index}")
         ]
     ]
     markup = InlineKeyboardMarkup(keyboard)
 
+    movie = movies[index]
+    overview = movie["overview"]
+    if len(overview) > 100:
+        overview[:97] + "..."
+
     await update.message.reply_photo(
-        caption=f"{context.user_data["movies"][index]["title"]}, year: {context.user_data["movies"][index]["year"]}",
+        caption=f"{movie["title"]}, year: {movie["year"]} \n\n{overview}",
         photo=movies[index]["images"][0]["remoteUrl"],
         reply_markup= markup
     )
 
-    return MOVIE
+    return ConversationHandler.END
 
 async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add the movie to radarr"""
     movie_number = context.user_data["selected_index"]
     movie = context.user_data["movies"][movie_number]
-    user = update.message.from_user
-    context.user_data["radarrClient"].add_movie(title=movie["title"], tmdbId=movie["tmdbId"], rootFolderPath=context.user_data["radarrClient"].rootFolder, qualityProfileId=4)
+    user = get_user(update)
     logger.info("User %s chose the movie %s.", user.first_name, movie["title"])
-    await update.message.reply_html(
-        text = "Adding movie"
-    )
 
+    #check if movie already exist in radarr
+    search_result = context.user_data["radarrClient"]._get_added_movies({"tmdbId": movie["tmdbId"]})
+    if search_result:
+        await update.callback_query.edit_message_caption(
+            caption= "Movie already exists!"
+        )
+    else:
+            context.user_data["radarrClient"].add_movie(
+                title=movie["title"], 
+                tmdbId=movie["tmdbId"], 
+                rootFolderPath=context.user_data["radarrClient"].rootFolder, 
+                qualityProfileId=4
+                )
+            await update.callback_query.edit_message_caption(
+            caption = "Movie Added!"
+        )
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancels and ends the conversation."""
-    user = update.message.from_user
+    user = get_user(update)
     logger.info("User %s canceled the conversation.", user.first_name)
-    await update.message.reply_text(
-        "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
-    )
-
     return ConversationHandler.END
 
 if __name__== "__main__":
     application = ApplicationBuilder().token(getToken(token_text)).build()
     
     conv_handler = ConversationHandler(
-        entry_points= [CommandHandler('get', entry)],
+        entry_points= [CommandHandler('movie', movie_entry)],
         states={
-            CHOICE: [MessageHandler(filters.Regex("^(movie|series)$"), name_of_movie)],
             SELECT: [MessageHandler(filters.TEXT, select_movie)],
-            MOVIE: [MessageHandler(filters.TEXT,callback=add_movie)],
-            QUALITY: [MessageHandler(filters.Regex("^(1080p|720p)$"), cancel)]
         },
         fallbacks= [CommandHandler('cancel', cancel)]
     )
@@ -208,10 +229,10 @@ if __name__== "__main__":
 
     application.add_handler(conv_handler)
     application.add_handler(start_handler)
-    application.add_handler(echo_handler)
+    #application.add_handler(echo_handler)
     application.add_handler(help_handler)
     application.add_handler(caps_handler)
     application.add_handler(CallbackQueryHandler(button))
 
-    #application.add_handler(unknown_handler)
+    application.add_handler(unknown_handler)
     application.run_polling()
