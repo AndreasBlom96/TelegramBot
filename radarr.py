@@ -9,10 +9,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def getApiKey():
-    with open("sacredtexts.txt", "r") as f:
+    with open("config.txt", "r") as f:
         logger.info("fetching radarr api key")
         lines = f.readlines()
-        return lines[1]
+        return lines[1].strip()
 
 
 class RadarrClient:
