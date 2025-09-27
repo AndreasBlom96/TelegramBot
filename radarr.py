@@ -203,6 +203,16 @@ class RadarrClient:
         resp = self._post("/movie", body)
         return resp
 
+    def add_tag_movie(self, id: int, tagId:id):
+        """adds tag to movie"""
+        movie = self._get(f"/movie/{id}")
+        body={
+            "qualityProfileId": movie["qualityProfileId"],
+            "path": movie["path"],
+            "tags":[tagId]
+        }
+        self._put(f"/movie/{id}", body)
+
     def movie_status(self, tmdbId: str):
         logger.info("Checking status for movie: %s", tmdbId)
         movie = self._get_added_movies({"tmdbId": tmdbId})
@@ -228,25 +238,9 @@ if __name__ == "__main__":
     print(r.movie_status(movie["tmdbId"]))
     r.add_movie(movie["title"], qualityProfileId= 4, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
     
-    resp = r.search_movie("inception")
-    movie = resp[0]
-    r.movie_isAvailable(movie["tmdbId"])
-
+    id = movie["id"]
     tags = r.get_tags()
-    if tags:
-        for tag in tags:
-            r.delete_tag(tag["id"])
-    
-    r.post_tag("Yo")
-    tags = r.get_tags()
-    print(tags)
-    for tag in tags:
-        if tag["label"]=="yo":
-            id = tag["id"]
-            print(f"id:{id}")
-    
-    r.edit_tag(id, "edited_tag_id:10")
-    print(r.get_tags())
+    r.add_tag_movie(id, tags[0]["id"])
 
     #print(r._get_added_movies())
     #r._post("/movies", None)
