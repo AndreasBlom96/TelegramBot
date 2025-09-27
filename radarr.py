@@ -32,6 +32,40 @@ class RadarrClient:
         else:
             return response[0]['path']
 
+    def get_tags(self):
+        """returns list of tags"""
+        logger.info("Fetching tags!")
+        return self._get("/tag")
+
+    def post_tag(self, label: str):
+        label = label.lower()
+        body = {
+            "label": label
+        }
+
+        #check if tag already exist
+        list_tags = self.get_tags()
+        if list_tags:
+            for tag in list_tags:
+                if tag["label"]==label:
+                    logger.info(f"tag already exists")
+                    return -1
+
+        logger.info(f"adding label: {label}")
+        return self._post("/tag", body)
+
+    def edit_tag(self, id: int, new_label: str):
+        body = {
+            "label": new_label
+        }
+        logger.info("Editing tag with new label")
+        return self._put(f"/tag/{id}", data=body)
+
+    def delete_tag(self, id: int):
+        """delete tag with id"""
+        logger.info(f"Deleting tag with id: {id}")
+        return self._delete(f"/tag/{id}")
+
     def _get_added_movies(self, param: str=None):
         """returns list of all added movies"""
         return self._get("/movie", param)
@@ -93,6 +127,48 @@ class RadarrClient:
             logger.error(f"unexpected error: {e}")
         return None
 
+    def _delete(self, endpoint, data=None, param=None ):
+        """request DELETE method that's safe and catches most error"""
+        try:
+            response = requests.delete(
+                url= f"{self.base_url}{endpoint}",
+                json= data,
+                headers= self.headers,
+                params= param
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+
+    def _put(self, endpoint, data=None, param=None):
+        """request PUT method that's safe and catches most error"""
+        try:
+            response = requests.put(
+                url= f"{self.base_url}{endpoint}",
+                json= data,
+                headers= self.headers,
+                params= param
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+
     def search_movie(self, query: str):
         """Search for a movie by title"""
         endpoint = "/movie/lookup"
@@ -150,13 +226,28 @@ if __name__ == "__main__":
     
     movie = resp[0]
     print(r.movie_status(movie["tmdbId"]))
-    print(movie.keys())
     r.add_movie(movie["title"], qualityProfileId= 4, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
     
     resp = r.search_movie("inception")
     movie = resp[0]
     r.movie_isAvailable(movie["tmdbId"])
+
+    tags = r.get_tags()
+    if tags:
+        for tag in tags:
+            r.delete_tag(tag["id"])
     
+    r.post_tag("Yo")
+    tags = r.get_tags()
+    print(tags)
+    for tag in tags:
+        if tag["label"]=="yo":
+            id = tag["id"]
+            print(f"id:{id}")
+    
+    r.edit_tag(id, "edited_tag_id:10")
+    print(r.get_tags())
+
     #print(r._get_added_movies())
     #r._post("/movies", None)
     #r.add_movie("Inception",0, 54678,78954, "/movies")
