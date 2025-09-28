@@ -3,7 +3,11 @@ from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKey
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, filters, MessageHandler, ConversationHandler, CallbackQueryHandler
 import logging
 from radarr import RadarrClient
+
+#config variables
 token_text = "config.txt"
+MAX_OVERVIEW_CHARS = 30
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -29,6 +33,17 @@ def get_user(update: Update):
         return update.message.from_user
     elif update.callback_query:
         return update.callback_query.from_user
+
+def get_tag(update, context):
+    """adds user tag to movie"""
+
+    #check if tag exists
+
+    #if exists: add that tag
+
+    #else create tag and return it
+
+    return -1
 
 #Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -115,8 +130,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         photo_url = movie["images"][0]["remoteUrl"]
 
     overview = movie["overview"]
-    if len(overview) > 100:
-        overview[:97] + "..."
+    if len(overview) > MAX_OVERVIEW_CHARS:
+        overview[:MAX_OVERVIEW_CHARS] + "..."
 
     await query.edit_message_media(media=InputMediaPhoto(photo_url))
     await query.edit_message_caption(
@@ -197,6 +212,8 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 rootFolderPath=context.user_data["radarrClient"].rootFolder, 
                 qualityProfileId=4
                 )
+            tag = get_tag()
+            context.user_data["RadarrClient"].add_tag_movie(movie["id"], tag)
             await update.callback_query.edit_message_caption(
             caption = "Movie Added!"
         )

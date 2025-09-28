@@ -203,13 +203,25 @@ class RadarrClient:
         resp = self._post("/movie", body)
         return resp
 
-    def add_tag_movie(self, id: int, tagId:id):
+    def add_tag_movie(self, id: int, tagId:int=None):
         """adds tag to movie"""
+
         movie = self._get(f"/movie/{id}")
+
+        tag_list = []
+
+        if len(movie["tags"]) > 0:
+            tags = movie["tags"]
+            for tag_id in tags:
+                tag_list.append(tag_id)
+
+        if tagId != None:
+            tag_list.append(tagId)
+
         body={
             "qualityProfileId": movie["qualityProfileId"],
             "path": movie["path"],
-            "tags":[tagId]
+            "tags":tag_list
         }
         self._put(f"/movie/{id}", body)
 
@@ -230,17 +242,16 @@ class RadarrClient:
 
 if __name__ == "__main__":
     r = RadarrClient()
-    print(r.API_key)
-    print(r.headers)
     resp = r.search_movie("Interstellar")
     
     movie = resp[0]
-    print(r.movie_status(movie["tmdbId"]))
-    r.add_movie(movie["title"], qualityProfileId= 4, tmdbId=movie["tmdbId"], rootFolderPath=r.rootFolder)
     
     id = movie["id"]
+    print(movie["tags"])
     tags = r.get_tags()
+    print(tags)
     r.add_tag_movie(id, tags[0]["id"])
+    print(movie["tags"])
 
     #print(r._get_added_movies())
     #r._post("/movies", None)
