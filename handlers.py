@@ -6,7 +6,7 @@ from radarr import RadarrClient
 
 #config variables
 token_text = "config.txt"
-MAX_OVERVIEW_CHARS = 30
+MAX_OVERVIEW_CHARS = 50
 
 
 logging.basicConfig(
@@ -34,16 +34,23 @@ def get_user(update: Update):
     elif update.callback_query:
         return update.callback_query.from_user
 
-def get_tag(update, context):
+def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """adds user tag to movie"""
+    logger.debug("Getting tag...")
+    user = str(get_user(update).first_name).lower()
+    label =  user + ":" + str(update.effective_chat.id).lower()
+    radarr = context.bot_data["radarrClient"]
+    tags = radarr.get_tags()
+    
 
     #check if tag exists
+    if tags:
+        for tag in tags:
+            if tag["label"] == label:
+                return tag
 
-    #if exists: add that tag
-
-    #else create tag and return it
-
-    return -1
+    #tag dosent exist, create one and return?
+    return radarr.post_tag(label)
 
 #Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -145,8 +152,6 @@ ENTRY, SELECT = range(2)
 async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Entry of conversation!"""
     logger.info("Entry of conversation")
-    r = RadarrClient()
-    context.user_data["radarrClient"] = r
     await update.message.reply_html(
         text= "what movie do you want to add?",
         reply_markup= None
@@ -156,7 +161,7 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Gives the user movies to select from"""
     logger.info("entering select_movie function in convohandler")
-    movies = context.user_data["radarrClient"].search_movie(update.message.text)
+    movies = context.bot_data["radarrClient"].search_movie(update.message.text)
     if not movies:
         logger.info("found no search result for %s", update.message.text)
         await update.message.reply_html(
@@ -200,20 +205,21 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("User %s chose the movie %s.", user.first_name, movie["title"])
 
     #check if movie already exist in radarr
-    search_result = context.user_data["radarrClient"]._get_added_movies({"tmdbId": movie["tmdbId"]})
+    search_result = context.bot_data["radarrClient"].get_added_movies({"tmdbId": movie["tmdbId"]})
     if search_result:
         await update.callback_query.edit_message_caption(
             caption= "Movie already exists!"
         )
     else:
-            context.user_data["radarrClient"].add_movie(
+            tag = get_tag(update, context)
+            context.bot_data["radarrClient"].add_movie(
                 title=movie["title"], 
                 tmdbId=movie["tmdbId"], 
-                rootFolderPath=context.user_data["radarrClient"].rootFolder, 
-                qualityProfileId=4
+                rootFolderPath=context.bot_data["radarrClient"].rootFolder, 
+                qualityProfileId=4,
+                tags=[tag["id"]]
                 )
-            tag = get_tag()
-            context.user_data["RadarrClient"].add_tag_movie(movie["id"], tag)
+            
             await update.callback_query.edit_message_caption(
             caption = "Movie Added!"
         )
@@ -227,7 +233,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 if __name__== "__main__":
     application = ApplicationBuilder().token(getToken(token_text)).build()
-    
+    application.bot_data["radarrClient"] = RadarrClient()
+
     conv_handler = ConversationHandler(
         entry_points= [CommandHandler('movie', movie_entry)],
         states={

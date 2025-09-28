@@ -66,7 +66,7 @@ class RadarrClient:
         logger.info(f"Deleting tag with id: {id}")
         return self._delete(f"/tag/{id}")
 
-    def _get_added_movies(self, param: str=None):
+    def get_added_movies(self, param: str=None):
         """returns list of all added movies"""
         return self._get("/movie", param)
 
@@ -113,7 +113,6 @@ class RadarrClient:
             response.raise_for_status()
             data = response.json()
             if not data:
-                logger.info("GET did not return any data")
                 return None
             return data
         
@@ -177,7 +176,7 @@ class RadarrClient:
         return output
 
     def add_movie(self, title: str, qualityProfileId: int, tmdbId: int, rootFolderPath: str, monitored: bool=True,
-     minimumAvailability: str="announced", isAvailable: bool=True ):
+     minimumAvailability: str="announced", isAvailable: bool=True , tags = []):
         """Adds movie to Radarr and starts"""
 
         logger.info("adding movie to radarr: %s", title)
@@ -193,7 +192,8 @@ class RadarrClient:
             "addOptions": {
                 "monitor": "movieOnly",
                 "searchForMovie": True
-            }
+            },
+            "tags": tags
         }
         movie = self._get_added_movies({"tmdbId": tmdbId})
         if movie:
