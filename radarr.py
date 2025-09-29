@@ -126,14 +126,12 @@ class RadarrClient:
             logger.error(f"unexpected error: {e}")
         return None
 
-    def _delete(self, endpoint, data=None, param=None ):
+    def _delete(self, endpoint):
         """request DELETE method that's safe and catches most error"""
         try:
             response = requests.delete(
                 url= f"{self.base_url}{endpoint}",
-                json= data,
                 headers= self.headers,
-                params= param
             )
             response.raise_for_status()
             return response
@@ -195,7 +193,7 @@ class RadarrClient:
             },
             "tags": tags
         }
-        movie = self._get_added_movies({"tmdbId": tmdbId})
+        movie = self.get_added_movies({"tmdbId": tmdbId})
         if movie:
             logger.info("Movie is already added, aborting")
             return None
@@ -240,18 +238,82 @@ class RadarrClient:
 
         return "missing"
 
+    def get_telegram_notifications(self):
+        """Get list of notifications"""
+        return self._get("/notification")
+
+    def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int=None, extra=None):
+        """Adds a telegram notification, returns None if the Name already exists"""
+        endpoint = "/notification"
+        
+        notif = self.get_notification_by_name(name)
+        if notif:
+            return notif
+
+        logger.info(f"Adding telegram notification for chatId: {chatId}")
+
+        if tagId == None:
+            tags = []
+        else:
+            tags = [tagId]
+
+        body = {
+            "configContract": "TelegramSettings",
+            "implementation": "Telegram",
+            "name": name,
+            "fields": [
+                {"name": "botToken", "value": botToken},
+                {"name": "chatId", "value": chatId}
+            ],
+            "tags": tags
+        }
+
+        if extra != None:
+            body.update(extra)
+
+        return self._post(endpoint, body)
+    
+    def get_notification_by_name(self, name: str):
+        """Returns notification by name if it exists. Otherwise it returns None"""
+        notifs = self.get_telegram_notifications()
+
+        if notifs:
+            for notif in notifs:
+                if notif["name"] == name:
+                    return notif
+        return None
+
+    def delete_telegram_notification(self, id: int, name: str=None):
+        """Deletes notification by name or id"""
+        
+        if id == None:
+            id = self.get_notification_by_name(name)["id"]
+
+        logger.info(f"Deleting notification id: {id}, name: {name}")
+        endpoint = f"/notification/{id}"
+        return self._delete(endpoint)
+
+    def edit_telegram_notification(self, id: int, name: str=None, data=None):
+        """edits a telegram notification by name or id. Data should be dict with changed values"""
+        if (id == None) and name != None:
+            notif = self.get_notification_by_name(name)
+            id = notif["id"]
+        else:
+            notif = self._get(f"/notification/{id}")
+
+        new_data = notif.update(data)
+        endpoint = "/notification/{id}"
+        return self._put(endpoint, new_data)
+
 if __name__ == "__main__":
     r = RadarrClient()
     resp = r.search_movie("Interstellar")
     
     movie = resp[0]
-    
-    id = movie["id"]
-    print(movie["tags"])
-    tags = r.get_tags()
-    print(tags)
-    r.add_tag_movie(id, tags[0]["id"])
-    print(movie["tags"])
+    print(movie.keys())
+    r.add_movie(movie["title"], 4, movie["tmdbId"], r.rootFolder, tags=[0])
+    notifs = r.get_telegram_notifications()
+
 
     #print(r._get_added_movies())
     #r._post("/movies", None)

@@ -37,11 +37,11 @@ def get_user(update: Update):
 def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """adds user tag to movie"""
     logger.debug("Getting tag...")
-    user = str(get_user(update).first_name).lower()
-    label =  user + ":" + str(update.effective_chat.id).lower()
+
     radarr = context.bot_data["radarrClient"]
     tags = radarr.get_tags()
-    
+    user = str(get_user(update).first_name).lower()
+    label =  user + ":" + str(update.effective_chat.id).lower()
 
     #check if tag exists
     if tags:
@@ -51,6 +51,20 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     #tag dosent exist, create one and return?
     return radarr.post_tag(label)
+
+def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE, tagId: int=None):
+    r = context.bot_data["radarrClient"]
+    user = get_user(update)
+    chatId = str(update.effective_chat.id).lower()
+    name = user.first_name.lower() + ":" + chatId
+    extra = {"onDownload": True}
+    return r.add_telegram_notification(
+        name, 
+        botToken= getToken(token_text), 
+        chatId= chatId,
+        tagId = tagId,
+        extra= extra
+     )
 
 #Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -67,10 +81,6 @@ async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text = "Unknown command!")
-
-#messages
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
 
 #Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -201,6 +211,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add the movie to radarr"""
     movie_number = context.user_data["selected_index"]
     movie = context.user_data["movies"][movie_number]
+
     user = get_user(update)
     logger.info("User %s chose the movie %s.", user.first_name, movie["title"])
 
@@ -220,6 +231,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 tags=[tag["id"]]
                 )
             
+            add_notification(update, context, tag["id"])
             await update.callback_query.edit_message_caption(
             caption = "Movie Added!"
         )
@@ -245,7 +257,6 @@ if __name__== "__main__":
 
 
     start_handler = CommandHandler('start', start)
-    echo_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), echo)
     help_handler = CommandHandler('help', help)
     caps_handler = CommandHandler('caps', caps)
     unknown_handler = MessageHandler(filters.COMMAND, unknown)
@@ -253,7 +264,6 @@ if __name__== "__main__":
 
     application.add_handler(conv_handler)
     application.add_handler(start_handler)
-    #application.add_handler(echo_handler)
     application.add_handler(help_handler)
     application.add_handler(caps_handler)
     application.add_handler(CallbackQueryHandler(button))
