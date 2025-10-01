@@ -56,7 +56,7 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # tag dosent exist, create one and return?
     return radarr.post_tag(label)
 
-  
+
 def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
                      tagId: int = None):
     r = context.bot_data["radarrClient"]
@@ -267,21 +267,25 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     logger.info("User %s canceled the conversation.", user.first_name)
     return ConversationHandler.END
 
-if __name__ == "__main__":
-    application = ApplicationBuilder().token(get_token()).build()
-    application.bot_data["radarrClient"] = RadarrClient()
 
-    conv_handler = ConversationHandler(
+conv_handler = ConversationHandler(
         entry_points=[CommandHandler('movie', movie_entry)],
         states={
             SELECT: [MessageHandler(filters.TEXT, select_movie)],
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
-    start_handler = CommandHandler('start', start)
-    help_handler = CommandHandler('help', help)
-    caps_handler = CommandHandler('caps', caps)
-    unknown_handler = MessageHandler(filters.COMMAND, unknown)
+start_handler = CommandHandler('start', start)
+help_handler = CommandHandler('help', help)
+caps_handler = CommandHandler('caps', caps)
+unknown_handler = MessageHandler(filters.COMMAND, unknown)
+movie_button_handler = CallbackQueryHandler(button)
+
+if __name__ == "__main__":
+    application = ApplicationBuilder().token(get_token()).build()
+    application.bot_data["radarrClient"] = RadarrClient()
+
+
     application.add_handler(conv_handler)
     application.add_handler(start_handler)
     application.add_handler(help_handler)
