@@ -1,12 +1,15 @@
 import requests
 import logging
 
+
+# logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
+
 
 def getApiKey():
     with open("config.txt", "r") as f:
@@ -22,7 +25,7 @@ class RadarrClient:
         self.base_url = f"http://{host}:{port}/api/v3"
         self.headers = {"X-Api-Key": self.API_key}
         self.rootFolder = self._getRootFolder()
-    
+
     def _getRootFolder(self):
         response = self._get("/rootfolder")
 
@@ -43,12 +46,12 @@ class RadarrClient:
             "label": label
         }
 
-        #check if tag already exist
+        # check if tag already exist
         list_tags = self.get_tags()
         if list_tags:
             for tag in list_tags:
-                if tag["label"]==label:
-                    logger.info(f"tag already exists")
+                if tag["label"] == label:
+                    logger.info("tag already exists")
                     return -1
 
         logger.info(f"adding label: {label}")
@@ -66,7 +69,7 @@ class RadarrClient:
         logger.info(f"Deleting tag with id: {id}")
         return self._delete(f"/tag/{id}")
 
-    def get_added_movies(self, param: str=None):
+    def get_added_movies(self, param: str = None):
         """returns list of all added movies"""
         return self._get("/movie", param)
 
@@ -84,9 +87,9 @@ class RadarrClient:
         """request POST method that's safe and catches most error"""
         try:
             response = requests.post(
-                url= f"{self.base_url}{endpoint}",
-                json= data,
-                headers= self.headers
+                url=f"{self.base_url}{endpoint}",
+                json=data,
+                headers=self.headers
             )
             response.raise_for_status()
             return response
@@ -99,7 +102,7 @@ class RadarrClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Unexpected error: {e}")
         return None
-        
+
     def _get(self, endpoint: str, params=None):
         """request get method that is safe and catches most errors"""
 
@@ -107,7 +110,7 @@ class RadarrClient:
             response = requests.get(
                 f"{self.base_url}{endpoint}",
                 params=params,
-                headers = self.headers,
+                headers=self.headers,
                 timeout=10
             )
             response.raise_for_status()
@@ -115,7 +118,7 @@ class RadarrClient:
             if not data:
                 return None
             return data
-        
+
         except requests.exceptions.ConnectionError:
             logger.error(f"Could not connect to Radarr at {self.base_url}{endpoint}")
         except requests.exceptions.Timeout:
@@ -130,8 +133,8 @@ class RadarrClient:
         """request DELETE method that's safe and catches most error"""
         try:
             response = requests.delete(
-                url= f"{self.base_url}{endpoint}",
-                headers= self.headers,
+                url=f"{self.base_url}{endpoint}",
+                headers=self.headers,
             )
             response.raise_for_status()
             return response
@@ -149,10 +152,10 @@ class RadarrClient:
         """request PUT method that's safe and catches most error"""
         try:
             response = requests.put(
-                url= f"{self.base_url}{endpoint}",
-                json= data,
-                headers= self.headers,
-                params= param
+                url=f"{self.base_url}{endpoint}",
+                json=data,
+                headers=self.headers,
+                params=param
             )
             response.raise_for_status()
             return response
@@ -173,12 +176,12 @@ class RadarrClient:
         output = self._get(endpoint, {"term": query})
         return output
 
-    def add_movie(self, title: str, qualityProfileId: int, tmdbId: int, rootFolderPath: str, monitored: bool=True,
-     minimumAvailability: str="announced", isAvailable: bool=True , tags = []):
+    def add_movie(self, title: str, qualityProfileId: int, tmdbId: int, rootFolderPath: str, monitored: bool = True,
+                  minimumAvailability: str = "announced", isAvailable: bool = True, tags=[]):
         """Adds movie to Radarr and starts"""
 
         logger.info("adding movie to radarr: %s", title)
-        #create json body
+        # create json body
         body = {
             "title": title,
             "tmdbId": tmdbId,
@@ -201,7 +204,7 @@ class RadarrClient:
         resp = self._post("/movie", body)
         return resp
 
-    def add_tag_movie(self, id: int, tagId:int=None):
+    def add_tag_movie(self, id: int, tagId: int = None):
         """adds tag to movie"""
 
         movie = self._get(f"/movie/{id}")
@@ -213,13 +216,13 @@ class RadarrClient:
             for tag_id in tags:
                 tag_list.append(tag_id)
 
-        if tagId != None:
+        if tagId is not None:
             tag_list.append(tagId)
 
-        body={
+        body = {
             "qualityProfileId": movie["qualityProfileId"],
             "path": movie["path"],
-            "tags":tag_list
+            "tags": tag_list
         }
         self._put(f"/movie/{id}", body)
 
@@ -229,12 +232,12 @@ class RadarrClient:
         if not movie:
             logger.info("movie %s is not added", tmdbId)
             return "not added"
-        
+
         has_file = movie[0]["hasFile"]
         if has_file:
             return "OK"
-        
-        #add logic for finding the movie in the queue?
+
+        # add logic for finding the movie in the queue?
 
         return "missing"
 
@@ -242,17 +245,17 @@ class RadarrClient:
         """Get list of notifications"""
         return self._get("/notification")
 
-    def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int=None, extra=None):
+    def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int = None, extra=None):
         """Adds a telegram notification, returns None if the Name already exists"""
         endpoint = "/notification"
-        
+
         notif = self.get_notification_by_name(name)
         if notif:
             return notif
 
         logger.info(f"Adding telegram notification for chatId: {chatId}")
 
-        if tagId == None:
+        if tagId is None:
             tags = []
         else:
             tags = [tagId]
@@ -268,11 +271,11 @@ class RadarrClient:
             "tags": tags
         }
 
-        if extra != None:
+        if extra is not None:
             body.update(extra)
 
         return self._post(endpoint, body)
-    
+
     def get_notification_by_name(self, name: str):
         """Returns notification by name if it exists. Otherwise it returns None"""
         notifs = self.get_telegram_notifications()
@@ -283,19 +286,18 @@ class RadarrClient:
                     return notif
         return None
 
-    def delete_telegram_notification(self, id: int, name: str=None):
+    def delete_telegram_notification(self, id: int, name: str = None):
         """Deletes notification by name or id"""
-        
-        if id == None:
+        if id is None:
             id = self.get_notification_by_name(name)["id"]
 
         logger.info(f"Deleting notification id: {id}, name: {name}")
         endpoint = f"/notification/{id}"
         return self._delete(endpoint)
 
-    def edit_telegram_notification(self, id: int, name: str=None, data=None):
+    def edit_telegram_notification(self, id: int, name: str = None, data=None):
         """edits a telegram notification by name or id. Data should be dict with changed values"""
-        if (id == None) and name != None:
+        if (id is None) and name is not None:
             notif = self.get_notification_by_name(name)
             id = notif["id"]
         else:
@@ -308,14 +310,7 @@ class RadarrClient:
 if __name__ == "__main__":
     r = RadarrClient()
     resp = r.search_movie("Interstellar")
-    
     movie = resp[0]
     print(movie.keys())
     r.add_movie(movie["title"], 4, movie["tmdbId"], r.rootFolder, tags=[0])
     notifs = r.get_telegram_notifications()
-
-
-    #print(r._get_added_movies())
-    #r._post("/movies", None)
-    #r.add_movie("Inception",0, 54678,78954, "/movies")
-    
