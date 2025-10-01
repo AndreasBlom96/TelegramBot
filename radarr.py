@@ -244,11 +244,11 @@ class RadarrClient:
     def get_telegram_notifications(self):
         """Get list of notifications"""
         return self._get("/notification")
-
+      
+      
     def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int = None, extra=None):
         """Adds a telegram notification, returns None if the Name already exists"""
         endpoint = "/notification"
-
         notif = self.get_notification_by_name(name)
         if notif:
             return notif
@@ -276,6 +276,7 @@ class RadarrClient:
 
         return self._post(endpoint, body)
 
+
     def get_notification_by_name(self, name: str):
         """Returns notification by name if it exists. Otherwise it returns None"""
         notifs = self.get_telegram_notifications()
@@ -286,6 +287,7 @@ class RadarrClient:
                     return notif
         return None
 
+
     def delete_telegram_notification(self, id: int, name: str = None):
         """Deletes notification by name or id"""
         if id is None:
@@ -294,6 +296,7 @@ class RadarrClient:
         logger.info(f"Deleting notification id: {id}, name: {name}")
         endpoint = f"/notification/{id}"
         return self._delete(endpoint)
+
 
     def edit_telegram_notification(self, id: int, name: str = None, data=None):
         """edits a telegram notification by name or id. Data should be dict with changed values"""

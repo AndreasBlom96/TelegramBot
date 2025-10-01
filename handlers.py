@@ -56,7 +56,7 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # tag dosent exist, create one and return?
     return radarr.post_tag(label)
 
-
+  
 def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
                      tagId: int = None):
     r = context.bot_data["radarrClient"]
