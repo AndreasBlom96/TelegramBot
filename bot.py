@@ -1,4 +1,4 @@
-from radarr import RadarrClient
+from radarr import RadarrClient, RADARR_HOST, RADARR_PORT
 from telegram.ext import ApplicationBuilder
 from handlers import (
     conv_handler,
@@ -6,12 +6,12 @@ from handlers import (
     help_handler,
     unknown_handler,
     movie_button_handler,
-    get_token
+    BOT_TOKEN
 )
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(get_token()).build()
-    application.bot_data["radarrClient"] = RadarrClient()
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    application.bot_data["radarrClient"] = RadarrClient(host=RADARR_HOST, port=RADARR_PORT)
 
     
     application.add_handler(conv_handler)

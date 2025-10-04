@@ -5,10 +5,13 @@ from telegram.ext import (ApplicationBuilder, ContextTypes, CommandHandler,
                           CallbackQueryHandler)
 import logging
 from radarr import RadarrClient
+import os
+from dotenv import load_dotenv
 
 # config variables
-token_text = "config.txt"
-MAX_OVERVIEW_CHARS = 50
+load_dotenv(dotenv_path="config.env")
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+MAX_OVERVIEW_CHARS = 75
 
 
 # Logging
@@ -23,14 +26,6 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 # help functions
-def get_token():
-    with open(token_text, "r") as file:
-        content = file.readline().strip()
-        return content
-    logger.error("Could not open txt file with bot token")
-    return None
-
-
 def get_user(update: Update):
     if update.message:
         return update.message.from_user
@@ -66,7 +61,7 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
     extra = {"onDownload": True}
     return r.add_telegram_notification(
         name,
-        botToken=get_token(),
+        botToken=BOT_TOKEN,
         chatId=chatId,
         tagId=tagId,
         extra=extra
@@ -168,7 +163,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await query.edit_message_media(media=InputMediaPhoto(photo_url))
     await query.edit_message_caption(
-        f'{movie["title"]}, year: {movie["year"]} \n\n{movie["overview"]}',
+        f'{movie["title"]}, year: {movie["year"]} \n\n{overview}',
         reply_markup=markup
         )
 
@@ -282,7 +277,7 @@ unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(get_token()).build()
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.bot_data["radarrClient"] = RadarrClient()
 
 

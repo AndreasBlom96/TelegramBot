@@ -1,6 +1,7 @@
 import requests
 import logging
-
+import os
+from dotenv import load_dotenv
 
 # logging
 logging.basicConfig(
@@ -11,17 +12,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def getApiKey():
-    with open("config.txt", "r") as f:
-        logger.info("fetching radarr api key")
-        lines = f.readlines()
-        return lines[1].strip()
+#read from config
+load_dotenv(dotenv_path="config.env")
+RADARR_API_KEY = os.getenv('RADARR_API_KEY')
+RADARR_HOST = os.getenv('RADARR_HOST')
+RADARR_PORT = os.getenv('RADARR_PORT')
 
 
 class RadarrClient:
 
     def __init__(self, host="localhost", port="7878"):
-        self.API_key = getApiKey()
+        self.API_key = RADARR_API_KEY
         self.base_url = f"http://{host}:{port}/api/v3"
         self.headers = {"X-Api-Key": self.API_key}
         self.rootFolder = self._getRootFolder()
@@ -311,7 +312,7 @@ class RadarrClient:
         return self._put(endpoint, new_data)
 
 if __name__ == "__main__":
-    r = RadarrClient()
+    r = RadarrClient(host=RADARR_HOST, port=RADARR_PORT)
     resp = r.search_movie("Interstellar")
     movie = resp[0]
     print(movie.keys())
