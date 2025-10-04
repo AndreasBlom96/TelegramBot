@@ -7,6 +7,7 @@ from handlers import (
     unknown_handler,
     movie_button_handler,
     list_users_handler,
+    claim_owner_handler,
     BOT_TOKEN
 )
 
@@ -20,6 +21,7 @@ if __name__ == "__main__":
     application.add_handler(help_handler)
     application.add_handler(movie_button_handler)
     application.add_handler(list_users_handler)
+    application.add_handler(claim_owner_handler)
 
     application.add_handler(unknown_handler)
     application.run_polling()

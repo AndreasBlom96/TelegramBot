@@ -69,6 +69,21 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
      )
 
 
+def edit_user_role(context: ContextTypes.DEFAULT_TYPE, new_role: str, user_id: int):
+    users_dict = context.bot_data.get("users", {})
+
+    valid_roles = ["admin", "user", "owner"]
+
+    if new_role not in valid_roles:
+        logger.warning("edit_user_role invalid new_role!")
+        return
+
+    if user_id in users_dict:
+        context.bot_data["users"][user_id]["role"] = new_role
+    else:
+        logger.warning(f"user_id does not exist in bot_data....")
+
+
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(update)
     user_id = user.id
@@ -82,9 +97,6 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
           "username": user.username,
           "name": user.full_name
         })
-    # set role
-    if "role" not in context.user_data:
-        context.user_data.setdefault("role", "user")
       
 
 # Commands
@@ -110,14 +122,29 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = context.bot_data.get("users", {})
-    user_names = []
+    user_names = {}
     for user in users:
-        user_names.append(users[user]["name"])
+        user_names.setdefault(users[user]["name"], users[user]["role"])
 
     await update.message.reply_html(
         text=f"list of users: {user_names}"
     )
 
+
+async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """claiming ownerhip of bot"""
+    user = get_user(update)
+
+    if "owner" in context.bot_data:
+        logger.info("There already exist a owner for this bot")
+        await update.message.reply_html(text="There already is an owner for this bot")
+        return
+    else:
+        logger.info(f"User: {user.full_name} claimed ownership of this bot")
+        await update.message.reply_html(text="You are now owner of this bot!")
+        context.bot_data.setdefault("owner", user.id)
+
+    edit_user_role(context, "owner", user.id)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -314,6 +341,7 @@ start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', help)
 caps_handler = CommandHandler('caps', caps)
 list_users_handler = CommandHandler('users', list_users)
+claim_owner_handler = CommandHandler('claim', claim_owner)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
 
@@ -328,6 +356,7 @@ if __name__ == "__main__":
     application.add_handler(help_handler)
     application.add_handler(caps_handler)
     application.add_handler(list_users_handler)
+    application.add_handler(claim_owner_handler)
     application.add_handler(CallbackQueryHandler(button))
 
     application.add_handler(unknown_handler)
