@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path="config.env")
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 MAX_OVERVIEW_CHARS = 75
+DEFAULT_QUOTA = 5
 
 
 # Logging
@@ -95,7 +96,8 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.bot_data["users"].setdefault(user_id, {
           "role": "user",
           "username": user.username,
-          "name": user.full_name
+          "name": user.full_name,
+          "quota": DEFAULT_QUOTA
         })
       
 
