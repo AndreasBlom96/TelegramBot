@@ -1,8 +1,16 @@
-from telegram import (Update, InlineKeyboardButton,
-                      InlineKeyboardMarkup, InputMediaPhoto)
-from telegram.ext import (ApplicationBuilder, ContextTypes, CommandHandler,
-                          filters, MessageHandler, ConversationHandler,
-                          CallbackQueryHandler)
+from telegram import (Update,
+                      InlineKeyboardButton,
+                      InlineKeyboardMarkup,
+                      InputMediaPhoto
+                      )
+from telegram.ext import (ApplicationBuilder,
+                          ContextTypes,
+                          CommandHandler,
+                          filters,
+                          MessageHandler,
+                          ConversationHandler,
+                          CallbackQueryHandler
+                          )
 import logging
 from radarr import RadarrClient
 import os
@@ -61,6 +69,24 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
      )
 
 
+async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = get_user(update)
+    user_id = user.id
+    users = context.bot_data.setdefault("users", {})
+
+    #add to list of users
+    if user_id not in users:
+        logger.info(f"adding user: {user.full_name} to list of user")
+        context.bot_data["users"].setdefault(user_id, {
+          "role": "user",
+          "username": user.username,
+          "name": user.full_name
+        })
+    # set role
+    if "role" not in context.user_data:
+        context.user_data.setdefault("role", "user")
+      
+
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(
@@ -82,11 +108,21 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                    text="Unknown command!")
 
 
+async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    users = context.bot_data.get("users", {})
+    user_names = []
+    for user in users:
+        user_names.append(users[user]["name"])
+
+    await update.message.reply_html(
+        text=f"list of users: {user_names}"
+    )
+
+
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
-
     await query.answer()
     action = query.data.split("_")[0]
     current_index = int(query.data.split("_")[1])
@@ -167,6 +203,12 @@ ENTRY, SELECT = range(2)
 async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Entry of conversation!"""
     logger.info("Entry of conversation")
+
+    # check users
+    await add_user(update, context)
+
+    # check quotas
+
     await update.message.reply_html(
         text="what movie do you want to add?",
         reply_markup=None
@@ -181,7 +223,7 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not movies:
         logger.info("found no search result for %s", update.message.text)
         await update.message.reply_html(
-            text=f"didnt find any movies with query: {update.message.text}"
+            text=f"Did not find any movies with query: {update.message.text} \n Try again or /cancel: "
         )
         return SELECT
 
@@ -206,12 +248,17 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     movie = movies[index]
     overview = movie["overview"]
-    if len(overview) > 100:
-        overview[:97] + "..."
-
+    if len(overview) > MAX_OVERVIEW_CHARS:
+        overview[:MAX_OVERVIEW_CHARS] + "..."
+    
+    default_photo = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
+    photo_url = default_photo
+    if movie["images"]:
+        photo_url = movie["images"][0]["remoteUrl"]
+        
     await update.message.reply_photo(
         caption=f"{movie["title"]}, year: {movie["year"]} \n\n{overview}",
-        photo=movies[index]["images"][0]["remoteUrl"],
+        photo=photo_url,
         reply_markup=markup
     )
 
@@ -225,7 +272,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     movie = context.user_data["movies"][movie_number]
 
     user = get_user(update)
-    logger.info("User %s chose the movie %s.", user.first_name, movie["title"])
+    logger.info("User %s chose the movie %s.", user.full_name, movie["title"])
 
     # check if movie already exist in radarr
     search_result = radarr.get_added_movies({"tmdbId": movie["tmdbId"]})
@@ -259,15 +306,17 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('movie', movie_entry)],
         states={
-            SELECT: [MessageHandler(filters.TEXT, select_movie)],
+            SELECT: [MessageHandler(filters.TEXT and (~filters.COMMAND), select_movie)],
         },
         fallbacks=[CommandHandler('cancel', cancel)]
     )
 start_handler = CommandHandler('start', start)
 help_handler = CommandHandler('help', help)
 caps_handler = CommandHandler('caps', caps)
+list_users_handler = CommandHandler('users', list_users)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
+
 
 if __name__ == "__main__":
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -278,6 +327,7 @@ if __name__ == "__main__":
     application.add_handler(start_handler)
     application.add_handler(help_handler)
     application.add_handler(caps_handler)
+    application.add_handler(list_users_handler)
     application.add_handler(CallbackQueryHandler(button))
 
     application.add_handler(unknown_handler)
