@@ -21,8 +21,8 @@ RADARR_PORT = os.getenv('RADARR_PORT')
 
 class RadarrClient:
 
-    def __init__(self, host="localhost", port="7878"):
-        self.API_key = RADARR_API_KEY
+    def __init__(self, API_key=RADARR_API_KEY, host="localhost", port="7878"):
+        self.API_key = API_key
         self.base_url = f"http://{host}:{port}/api/v3"
         self.headers = {"X-Api-Key": self.API_key}
         self.rootFolder = self._getRootFolder()
@@ -53,7 +53,7 @@ class RadarrClient:
             for tag in list_tags:
                 if tag["label"] == label:
                     logger.info("tag already exists")
-                    return -1
+                    return tag
 
         logger.info(f"adding label: {label}")
         return self._post("/tag", body)

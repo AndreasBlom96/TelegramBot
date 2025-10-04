@@ -37,18 +37,11 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """adds user tag to movie"""
     logger.debug("Getting tag...")
 
-    radarr = context.bot_data["radarrClient"]
-    tags = radarr.get_tags()
     user = str(get_user(update).first_name).lower()
     label = user + ":" + str(update.effective_chat.id).lower()
 
-    # check if tag exists
-    if tags:
-        for tag in tags:
-            if tag["label"] == label:
-                return tag
-
-    # tag dosent exist, create one and return?
+    #post_tag will return a tag if it already exsists
+    radarr = context.bot_data["radarrClient"]
     return radarr.post_tag(label)
 
 
