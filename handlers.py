@@ -129,7 +129,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_names.setdefault(users[user]["name"], users[user]["role"])
 
     await update.message.reply_html(
-        text=f"list of users: {user_names}"
+        text=f"list of users: {users}"
     )
 
 
@@ -147,6 +147,50 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.bot_data.setdefault("owner", user.id)
 
     edit_user_role(context, "owner", user.id)
+
+
+async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Changes role of a users"""
+
+    # check if owner
+    users = context.bot_data.get("users", {})
+    user = get_user(update)
+
+    if user.id in users:
+        role = users[user.id]["role"]
+        if role != "owner":
+            await update.message.reply_html(text="You do not have rights to set roles")
+            return
+    else:
+        return
+
+    args = context.args
+    if len(args) < 2 or len(args) > 2:
+        # wrong number of args
+        await update.message.reply_html(text=f"exptected 2 arguments, got {len(args)}")
+        return
+    
+    # check first argument
+    valid_first_args = ["admin", "user"]
+    if args[0] not in valid_first_args:
+        await update.message.reply_html(text="not a valid role. Must be admin or user")
+        return
+
+    user_id = int(args[1])
+    # check second argument
+    if user_id not in users:
+        await update.message.reply_html(text="user_id is not known to bot, check /users")
+        return
+    
+    # check if user_id is owner
+    for user in users:
+        if users[user]["role"] == "owner":
+            if user == user_id:
+                await update.message.reply_html(text="can't change role of owner")
+                return
+            
+    logger.info(f"Changeing role for {user_id} to {args[0]}")
+    edit_user_role(context, args[0], user_id)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -344,6 +388,7 @@ help_handler = CommandHandler('help', help)
 caps_handler = CommandHandler('caps', caps)
 list_users_handler = CommandHandler('users', list_users)
 claim_owner_handler = CommandHandler('claim', claim_owner)
+set_role_handler = CommandHandler('set_role', set_role)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
 
@@ -360,6 +405,7 @@ if __name__ == "__main__":
     application.add_handler(list_users_handler)
     application.add_handler(claim_owner_handler)
     application.add_handler(CallbackQueryHandler(button))
+    application.add_handler(set_role_handler)
 
     application.add_handler(unknown_handler)
     application.run_polling()
