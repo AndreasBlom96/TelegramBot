@@ -49,7 +49,7 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = str(get_user(update).first_name).lower()
     label = user + ":" + str(update.effective_chat.id).lower()
 
-    #post_tag will return a tag if it already exsists
+    # Post_tag will return a tag if it already exsists
     radarr = context.bot_data["radarrClient"]
     return radarr.post_tag(label)
 
@@ -70,7 +70,9 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
      )
 
 
-def edit_user_role(context: ContextTypes.DEFAULT_TYPE, new_role: str, user_id: int):
+def edit_user_role(context: ContextTypes.DEFAULT_TYPE,
+                   new_role: str,
+                   user_id: int):
     users_dict = context.bot_data.get("users", {})
 
     valid_roles = ["admin", "user", "owner"]
@@ -82,7 +84,7 @@ def edit_user_role(context: ContextTypes.DEFAULT_TYPE, new_role: str, user_id: i
     if user_id in users_dict:
         context.bot_data["users"][user_id]["role"] = new_role
     else:
-        logger.warning(f"user_id does not exist in bot_data....")
+        logger.warning(f"user_id {user_id} does not exist in bot_data....")
 
 
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -90,7 +92,7 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = user.id
     users = context.bot_data.setdefault("users", {})
 
-    #add to list of users
+    # Add to list of users
     if user_id not in users:
         logger.info(f"adding user: {user.full_name} to list of user")
         context.bot_data["users"].setdefault(user_id, {
@@ -99,7 +101,7 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
           "name": user.full_name,
           "quota": DEFAULT_QUOTA
         })
-      
+
 
 # Commands
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -109,7 +111,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Write command /movie to start adding movie")
+    msg = "Write command /movie to start adding movie"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
 
 async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -169,7 +172,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # wrong number of args
         await update.message.reply_html(text=f"exptected 2 arguments, got {len(args)}")
         return
-    
+
     # check first argument
     valid_first_args = ["admin", "user"]
     if args[0] not in valid_first_args:
@@ -181,16 +184,17 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in users:
         await update.message.reply_html(text="user_id is not known to bot, check /users")
         return
-    
+
     # check if user_id is owner
     for user in users:
         if users[user]["role"] == "owner":
             if user == user_id:
                 await update.message.reply_html(text="can't change role of owner")
                 return
-            
+
     logger.info(f"Changeing role for {user_id} to {args[0]}")
     edit_user_role(context, args[0], user_id)
+
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -323,12 +327,12 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     overview = movie["overview"]
     if len(overview) > MAX_OVERVIEW_CHARS:
         overview[:MAX_OVERVIEW_CHARS] + "..."
-    
+
     default_photo = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
     photo_url = default_photo
     if movie["images"]:
         photo_url = movie["images"][0]["remoteUrl"]
-        
+
     await update.message.reply_photo(
         caption=f"{movie["title"]}, year: {movie["year"]} \n\n{overview}",
         photo=photo_url,
