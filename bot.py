@@ -1,4 +1,4 @@
-from radarr import RadarrClient, RADARR_HOST, RADARR_PORT, RADARR_API_KEY
+from radarr import RadarrClient
 from telegram.ext import ApplicationBuilder
 from handlers import (
     conv_handler,
@@ -9,7 +9,12 @@ from handlers import (
     list_users_handler,
     claim_owner_handler,
     set_role_handler,
-    BOT_TOKEN
+)
+from constants import (
+    BOT_TOKEN,
+    RADARR_API_KEY,
+    RADARR_HOST,
+    RADARR_PORT
 )
 
 if __name__ == "__main__":

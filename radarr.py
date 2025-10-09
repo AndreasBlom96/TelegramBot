@@ -1,7 +1,10 @@
 import requests
 import logging
-import os
-from dotenv import load_dotenv
+from constants import (
+    RADARR_API_KEY,
+    RADARR_HOST,
+    RADARR_PORT
+)
 
 # logging
 logging.basicConfig(
@@ -10,13 +13,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-
-#read from config
-load_dotenv(dotenv_path="config.env")
-RADARR_API_KEY = os.getenv('RADARR_API_KEY')
-RADARR_HOST = os.getenv('RADARR_HOST')
-RADARR_PORT = os.getenv('RADARR_PORT')
 
 
 class RadarrClient:
@@ -75,7 +71,7 @@ class RadarrClient:
         return self._get("/movie", param)
 
     def movie_isAvailable(self, tmdbId: str):
-        """checks if movie is downloaded and available"""
+        """checks if movie is available"""
         resp = self._get_added_movies({"tmdbId": tmdbId})
         if not resp:
             logger.info("Movie is not added: not available")
