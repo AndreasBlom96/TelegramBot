@@ -414,7 +414,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         recent_movie_list = context.user_data.get("recent movies", [])
         recent_movie_list.append(datetime.now())
-        context.user_data.setdefault("recent_movies", recent_movie_list)
+        context.user_data.setdefault("recent movies", recent_movie_list)
     
     context.user_data["movies"].clear()
     return ConversationHandler.END
