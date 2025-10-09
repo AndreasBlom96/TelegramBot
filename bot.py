@@ -9,6 +9,7 @@ from handlers import (
     list_users_handler,
     claim_owner_handler,
     set_role_handler,
+    edit_quota_handler,
 )
 from constants import (
     BOT_TOKEN,
@@ -29,6 +30,7 @@ if __name__ == "__main__":
     application.add_handler(list_users_handler)
     application.add_handler(claim_owner_handler)
     application.add_handler(set_role_handler)
+    application.add_handler(edit_quota_handler)
 
     application.add_handler(unknown_handler)
     application.run_polling()

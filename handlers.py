@@ -22,11 +22,11 @@ from constants import BOT_TOKEN, DEFAULT_QUOTA
 from helpers import(
     get_user,
     get_tag,
-    get_user_dict,
     edit_user_role,
     add_notification,
     add_user,
     update_recent_movies,
+    edit_user_quota,
 )
 
 # config variables
@@ -150,6 +150,31 @@ async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bo
         return True
     return False
 
+
+async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    args = context.args
+
+    if len(args) > 2 or len(args) < 2:
+        await update.message.reply_html(text=f"got {len(args)} arguments, expected 2")
+        return
+    
+    if not args[0].isnumeric():
+        await update.message.reply_html(text="argument target_user_id is not a number")
+        return
+    
+    target_user_id = int(args[0])
+    users = context.bot_data.get("users", {})
+    if target_user_id not in users:
+        await update.message.reply_html(text=f"User id: {target_user_id} is not known user.")
+        return
+
+    if not args[1].isnumeric():
+        await update.message.reply_html(text="argument new_quota is not a number")
+        return
+    
+    new_quota = int(args[1])
+
+    edit_user_quota(update, context, target_user_id, new_quota)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -359,6 +384,7 @@ claim_owner_handler = CommandHandler('claim', claim_owner)
 set_role_handler = CommandHandler('set_role', set_role)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
+edit_quota_handler = CommandHandler('set_quota', edit_quota)
 
 
 if __name__ == "__main__":
