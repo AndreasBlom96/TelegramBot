@@ -13,19 +13,21 @@ from telegram.ext import (ApplicationBuilder,
                           )
 from datetime import (
     datetime,
-    timedelta,
 )
 import logging
+from user_manager import UserManager
 from radarr import RadarrClient
-import os
-from dotenv import load_dotenv
+from constants import BOT_TOKEN, DEFAULT_QUOTA
+from helpers import(
+    get_user,
+    get_tag,
+    add_notification,
+    add_user,
+    update_recent_movies,
+)
 
 # config variables
-load_dotenv(dotenv_path="config.env")
-BOT_TOKEN = os.getenv('BOT_TOKEN')
 MAX_OVERVIEW_CHARS = 75
-DEFAULT_QUOTA = 5
-
 
 
 # Logging
@@ -37,94 +39,6 @@ logger = logging.getLogger(__name__)
 
 # set higher logging level for httpx
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
-
-# help functions
-def get_user(update: Update):
-    if update.message:
-        return update.message.from_user
-    elif update.callback_query:
-        return update.callback_query.from_user
-
-
-def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """adds user tag to movie"""
-    logger.debug("Getting tag...")
-
-    user = str(get_user(update).first_name).lower()
-    label = user + ":" + str(update.effective_chat.id).lower()
-
-    # Post_tag will return a tag if it already exsists
-    radarr = context.bot_data["radarrClient"]
-    return radarr.post_tag(label)
-
-
-def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                     tagId: int = None, extra = None):
-    """Adds notifications to radarr"""
-    r = context.bot_data["radarrClient"]
-    user = get_user(update)
-    chatId = str(update.effective_chat.id).lower()
-    name = user.first_name.lower() + ":" + chatId
-    return r.add_telegram_notification(
-        name,
-        botToken=BOT_TOKEN,
-        chatId=chatId,
-        tagId=tagId,
-        extra=extra
-     )
-
-
-def edit_user_role(context: ContextTypes.DEFAULT_TYPE,
-                   new_role: str,
-                   user_id: int):
-    users_dict = context.bot_data.get("users", {})
-
-    valid_roles = ["admin", "user", "owner"]
-
-    if new_role not in valid_roles:
-        logger.warning("edit_user_role invalid new_role!")
-        return
-
-    if user_id in users_dict:
-        context.bot_data["users"][user_id]["role"] = new_role
-    else:
-        logger.warning(f"user_id {user_id} does not exist in bot_data....")
-
-
-async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = get_user(update)
-    user_id = user.id
-    users = context.bot_data.setdefault("users", {})
-
-    # Add to list of users
-    if user_id not in users:
-        logger.info(f"adding user: {user.full_name} to list of user")
-        context.bot_data["users"].setdefault(user_id, {
-          "role": "user",
-          "username": user.username,
-          "name": user.full_name,
-          "quota": DEFAULT_QUOTA
-        })
-
-
-def get_user_dict(context: ContextTypes.DEFAULT_TYPE, user_id):
-    """Function to return a users dict"""
-    users = context.bot_data.get("users", {})
-    
-    for user in users:
-        if user == user_id:
-            return users[user_id]
-    
-    return None
-
-
-def update_recent_movies(context: ContextTypes.DEFAULT_TYPE):
-    """Updated recent movielist"""
-    current_list = context.user_data.get("recent movies", [])
-    limit = datetime.now() - timedelta(days=7)
-    new_list = [t for t in current_list if t > limit]
-    context.user_data.setdefault("recent movies", new_list)
 
 
 # Commands
@@ -162,34 +76,35 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """claiming ownerhip of bot"""
-    user = get_user(update)
-
+    user = UserManager(update, context)
+    await add_user(update, context)
     if "owner" in context.bot_data:
         logger.info("There already exist a owner for this bot")
         await update.message.reply_html(text="There already is an owner for this bot")
         return
     else:
-        logger.info(f"User: {user.full_name} claimed ownership of this bot")
+        logger.info(f"User: {user.user.full_name} claimed ownership of this bot")
         await update.message.reply_html(text="You are now owner of this bot!")
         context.bot_data.setdefault("owner", user.id)
 
-    edit_user_role(context, "owner", user.id)
+    users = context.bot_data.get("users", {})
+    for user_id in users:
+        if user_id == user.id:
+            users[user_id]["role"] = "owner"
+
+    # add notifications
+    extra_dict = {}
+    extra_dict.setdefault("onHealthIssue", True)
+    extra_dict.setdefault("onHealthRestored", True)
+    extra_dict.setdefault("includeHealthWarnings", True)
+    add_notification(update, context, extra=extra_dict)
 
 
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Changes role of a users"""
 
-    # check if owner
-    users = context.bot_data.get("users", {})
-    user = get_user(update)
-
-    if user.id in users:
-        role = users[user.id]["role"]
-        if role != "owner":
-            await update.message.reply_html(text="You do not have rights to set roles")
-            return
-    else:
-        return
+    manager = UserManager(update, context)
+    users = context.bot_data["users"]
 
     args = context.args
     if len(args) < 2 or len(args) > 2:
@@ -202,6 +117,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if args[0] not in valid_first_args:
         await update.message.reply_html(text="not a valid role. Must be admin or user")
         return
+    new_role = args[0]
 
     user_id = int(args[1])
     # check second argument
@@ -209,30 +125,56 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_html(text="user_id is not known to bot, check /users")
         return
 
-    # check if user_id is owner
-    for user in users:
-        if users[user]["role"] == "owner":
-            if user == user_id:
-                await update.message.reply_html(text="can't change role of owner")
-                return
+    # check role of target user
+    if manager.isOwner(user_id):
+        await update.message.reply_html(text="Cant change role of owner")
+        logger.warning("Cant change role of owner")
+        return
 
     logger.info(f"Changeing role for {user_id} to {args[0]}")
-    edit_user_role(context, args[0], user_id)
-
+    await manager.edit_role(new_role, user_id)
+    
 
 async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if weekly movie quotas is met"""
     update_recent_movies(context)
-    recent_movie_list = context.user_data.get("recent movies", [])
-    user_dict = get_user_dict(context, get_user(update).id)
-    quota = user_dict.get("quota", DEFAULT_QUOTA)
-    if len(recent_movie_list) >= quota and user_dict.get("role", "user") == "user":
+    user = UserManager(update, context)
+    recent_movie_list = user.get_recent_movies()
+    quota = user.get_quota()
+    if len(recent_movie_list) >= quota and user.get_role() == "user":
         logger.info(f"User has met their weekly quota of {quota} movies. Aborting")
         await update.message.reply_html(text=f"Your weekly quota of {quota} has been met. \
         You have to wait before adding another movie")
         return True
     return False
 
+
+async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    manager = UserManager(update, context)
+    args = context.args
+
+    if len(args) > 2 or len(args) < 2:
+        await update.message.reply_html(text=f"got {len(args)} arguments, expected 2")
+        return
+    
+    if not args[0].isnumeric():
+        await update.message.reply_html(text="argument target_user_id is not a number")
+        return
+    
+    target_user_id = int(args[0])
+    users = context.bot_data.get("users", {})
+    if target_user_id not in users:
+        await update.message.reply_html(text=f"User id: {target_user_id} is not known user.")
+        return
+
+    if not args[1].isnumeric():
+        await update.message.reply_html(text="argument new_quota is not a number")
+        return
+    
+    new_quota = int(args[1])
+
+    await manager.set_quota(target_user_id, new_quota)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -442,6 +384,7 @@ claim_owner_handler = CommandHandler('claim', claim_owner)
 set_role_handler = CommandHandler('set_role', set_role)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
+edit_quota_handler = CommandHandler('set_quota', edit_quota)
 
 
 if __name__ == "__main__":

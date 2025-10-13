@@ -1,14 +1,16 @@
 TODO
-- fix max movies per week
-    - make admins and sbove be able to change quotas
-- make owner notification for radarr health status
+- Fix recent movies status for users
+- Make owner notification for radarr health status
+- Fix python requirements!
 
 
 commands
-- claim
-- set_role
-- users
 - movie
 - cancel
 - help
 - start
+
+- claim
+- set_role
+- set_quota
+- users

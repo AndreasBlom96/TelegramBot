@@ -1,4 +1,4 @@
-from radarr import RadarrClient, RADARR_HOST, RADARR_PORT, RADARR_API_KEY
+from radarr import RadarrClient
 from telegram.ext import ApplicationBuilder
 from handlers import (
     conv_handler,
@@ -9,7 +9,13 @@ from handlers import (
     list_users_handler,
     claim_owner_handler,
     set_role_handler,
-    BOT_TOKEN
+    edit_quota_handler,
+)
+from constants import (
+    BOT_TOKEN,
+    RADARR_API_KEY,
+    RADARR_HOST,
+    RADARR_PORT
 )
 
 if __name__ == "__main__":
@@ -24,6 +30,7 @@ if __name__ == "__main__":
     application.add_handler(list_users_handler)
     application.add_handler(claim_owner_handler)
     application.add_handler(set_role_handler)
+    application.add_handler(edit_quota_handler)
 
     application.add_handler(unknown_handler)
     application.run_polling()
