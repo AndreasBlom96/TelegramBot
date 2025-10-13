@@ -36,7 +36,7 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
     r = context.bot_data["radarrClient"]
     user = get_user(update)
     chatId = str(update.effective_chat.id).lower()
-    name = user.first_name.lower() + ":" + user.id
+    name = user.first_name.lower() + ":" + str(user.id)
     return r.add_telegram_notification(
         name,
         botToken=BOT_TOKEN,
@@ -68,14 +68,3 @@ def update_recent_movies(context: ContextTypes.DEFAULT_TYPE):
     limit = datetime.now() - timedelta(days=7)
     new_list = [t for t in current_list if t > limit]
     context.user_data.setdefault("recent movies", new_list)
-
-
-def edit_user_quota(update: Update, context: ContextTypes.DEFAULT_TYPE, target_user_id: int, new_quota: int):
-
-    if new_quota < 0:
-        return
-    
-    users = context.bot_data.get("users", {})
-
-    if target_user_id in users:
-        users[target_user_id]["quota"] = new_quota

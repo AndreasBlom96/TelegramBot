@@ -12,6 +12,25 @@ class UserManager:
         self.user = update.effective_user
         self.id = update.effective_user.id
         self.context = context
+        self.update = update
+
+    @staticmethod
+    def required_roles(*roles):
+        def decorator(func):
+            async def wrapper_required_roles(self, *args,**kwargs):
+                if self.get_role() not in roles:
+                    logger.warning(
+                        "you do not have the rights for this operation"
+                        )
+                    await self.update.message.reply_html(
+                        text="You do not have the rights"
+                        )
+                    return
+
+                return func(*args, **kwargs)
+            return wrapper_required_roles
+        return decorator
+
 
     def get_user_dict(self, target_id: int=None) -> dict:
         """Resturns the users dict from context.bot_data"""
@@ -33,7 +52,7 @@ class UserManager:
         """returns """
         return self.get_user_dict().get("quota")
 
-
+    @required_roles("owner", "admin")
     def set_quota(self, target_id: int=None, new_quota: int=0):
         """sets new quota users"""
         if new_quota < 0:
@@ -41,7 +60,7 @@ class UserManager:
         user_dict =  self.get_user_dict(target_id)["quota"]
         user_dict["quota"] = new_quota
 
-
+    @required_roles("owner")
     def edit_role(self, new_role: str, target_id: int=None) -> bool:
         """edits role for user"""
         new_role = new_role.lower()

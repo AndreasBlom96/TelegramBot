@@ -246,11 +246,6 @@ class RadarrClient:
     def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int = None, extra=None):
         """Adds a telegram notification, returns None if the Name already exists"""
         endpoint = "/notification"
-        notif = self.get_notification_by_name(name)
-        if notif:
-            return notif
-
-        logger.info(f"Adding telegram notification for chatId: {chatId}")
 
         if tagId is None:
             tags = []
@@ -271,10 +266,24 @@ class RadarrClient:
         if extra is not None:
             body.update(extra)
 
+        notif = self.get_notification_by_name(name)
+        if notif:
+            logger.info("editing existing telegram notification")
+            notif.update(extra)
+
+            old_tags = notif.get("tags", [])
+            new_tags = list(set(old_tags + tags))
+            notif["tags"] = new_tags
+
+            endpoint = endpoint + "/" + str(notif["id"])
+            self._put(endpoint, notif)
+            return notif
+
+        logger.info(f"Adding telegram notification for chatId: {chatId}")
         return self._post(endpoint, body)
 
 
-    def get_notification_by_name(self, name: str):
+    def get_notification_by_name(self, name: str) -> dict:
         """Returns notification by name if it exists. Otherwise it returns None"""
         notifs = self.get_telegram_notifications()
 
@@ -282,7 +291,7 @@ class RadarrClient:
             for notif in notifs:
                 if notif["name"] == name:
                     return notif
-        return None
+        return {}
 
 
     def delete_telegram_notification(self, id: int, name: str = None):

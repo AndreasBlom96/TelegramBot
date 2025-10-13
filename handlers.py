@@ -13,7 +13,6 @@ from telegram.ext import (ApplicationBuilder,
                           )
 from datetime import (
     datetime,
-    timedelta,
 )
 import logging
 from user_manager import UserManager
@@ -88,7 +87,17 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_html(text="You are now owner of this bot!")
         context.bot_data.setdefault("owner", user.id)
 
-    user.edit_role("owner")
+    users = context.bot_data.get("users", {})
+    for user_id in users:
+        if user_id == user.id:
+            users[user_id]["role"] = "owner"
+
+    # add notifications
+    extra_dict = {}
+    extra_dict.setdefault("onHealthIssue", True)
+    extra_dict.setdefault("onHealthRestored", True)
+    extra_dict.setdefault("includeHealthWarnings", True)
+    add_notification(update, context, extra=extra_dict)
 
 
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,10 +105,6 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     manager = UserManager(update, context)
     users = context.bot_data["users"]
-    # check if owner
-    if not manager.isOwner():
-        logger.warning("Must be owner to be able to set role")
-        return
 
     args = context.args
     if len(args) < 2 or len(args) > 2:
@@ -127,7 +132,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.info(f"Changeing role for {user_id} to {args[0]}")
-    manager.edit_role(new_role, user_id)
+    await manager.edit_role(new_role, user_id)
     
 
 async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -169,7 +174,7 @@ async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     new_quota = int(args[1])
 
-    manager.set_quota(target_user_id, new_quota)
+    await manager.set_quota(target_user_id, new_quota)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
