@@ -36,7 +36,7 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
     r = context.bot_data["radarrClient"]
     user = get_user(update)
     chatId = str(update.effective_chat.id).lower()
-    name = user.first_name.lower() + ":" + chatId
+    name = user.first_name.lower() + ":" + user.id
     return r.add_telegram_notification(
         name,
         botToken=BOT_TOKEN,
@@ -44,23 +44,6 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
         tagId=tagId,
         extra=extra
      )
-
-
-def edit_user_role(context: ContextTypes.DEFAULT_TYPE,
-                   new_role: str,
-                   user_id: int):
-    users_dict = context.bot_data.get("users", {})
-
-    valid_roles = ["admin", "user", "owner"]
-
-    if new_role not in valid_roles:
-        logger.warning("edit_user_role invalid new_role!")
-        return
-
-    if user_id in users_dict:
-        context.bot_data["users"][user_id]["role"] = new_role
-    else:
-        logger.warning(f"user_id {user_id} does not exist in bot_data....")
 
 
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE):

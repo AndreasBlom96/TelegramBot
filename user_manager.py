@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+import logging
 
+logger = logging.getLogger(__name__)
 
 VALID_ROLES = ["owner", "admin", "user"]
 
@@ -11,31 +13,55 @@ class UserManager:
         self.id = update.effective_user.id
         self.context = context
 
-    def get_user_dict(self) -> dict:
-        users = self.context.bot_data.get("users", {})
-        return users.get(self.id, {})
+    def get_user_dict(self, target_id: int=None) -> dict:
 
-    def get_role(self) -> str:
-        return self.get_user_dict().get("role")
+        if target_id:
+            user_id = target_id
+        else:
+            user_id = self.id
+
+        users = self.context.bot_data.get("users", {})
+        return users.get(user_id, {})
+
+
+    def get_role(self, target_id: int=None) -> str:
+        return self.get_user_dict(target_id).get("role")
     
+
     def get_quota(self) -> int:
         return self.get_user_dict().get("quota")
 
-    def edit_role(self, new_role: str) -> bool:
+
+    def set_quota(self, target_id: int=None, new_quota: int=0):
+        user_dict =  self.get_user_dict(target_id)["quota"]
+        user_dict["quota"] = new_quota
+
+
+    def edit_role(self, new_role: str, target_id: int=None) -> bool:
 
         new_role = new_role.lower()
 
         # check valid roles
         if new_role not in VALID_ROLES:
+            logger.warning("not a valid role")
             return False
 
-        user_dict = self.get_user_dict()
+        user_dict = self.get_user_dict(target_id)
 
-        if not user_dict:
+        if (not user_dict) or (user_dict.get("role") == "owner"):
+            logger.warning(f"failed to set new role")
             return False  # user not found
-        
+
         user_dict["role"] = new_role
+        logger.info(f"new role {new_role} set for user {user_dict.get("name")}")
         return True
     
+
     def get_recent_movies(self) -> list:
         return self.context.user_data.get("recent movies", [])
+    
+    
+    def isOwner(self, target_id: int=None) -> bool:
+        if self.get_role(target_id) == "owner":
+            return True
+        return False

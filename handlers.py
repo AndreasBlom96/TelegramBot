@@ -22,11 +22,9 @@ from constants import BOT_TOKEN, DEFAULT_QUOTA
 from helpers import(
     get_user,
     get_tag,
-    edit_user_role,
     add_notification,
     add_user,
     update_recent_movies,
-    edit_user_quota,
 )
 
 # config variables
@@ -96,16 +94,11 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Changes role of a users"""
 
+    manager = UserManager(update, context)
+    users = context.bot_data["users"]
     # check if owner
-    users = context.bot_data.get("users", {})
-    user = get_user(update)
-
-    if user.id in users:
-        role = users[user.id]["role"]
-        if role != "owner":
-            await update.message.reply_html(text="You do not have rights to set roles")
-            return
-    else:
+    if not manager.isOwner():
+        logger.warning("Must be owner to be able to set role")
         return
 
     args = context.args
@@ -119,6 +112,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if args[0] not in valid_first_args:
         await update.message.reply_html(text="not a valid role. Must be admin or user")
         return
+    new_role = args[0]
 
     user_id = int(args[1])
     # check second argument
@@ -126,16 +120,15 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_html(text="user_id is not known to bot, check /users")
         return
 
-    # check if user_id is owner
-    for user in users:
-        if users[user]["role"] == "owner":
-            if user == user_id:
-                await update.message.reply_html(text="can't change role of owner")
-                return
+    # check role of target user
+    if manager.isOwner(user_id):
+        await update.message.reply_html(text="Cant change role of owner")
+        logger.warning("Cant change role of owner")
+        return
 
     logger.info(f"Changeing role for {user_id} to {args[0]}")
-    edit_user_role(context, args[0], user_id)
-
+    manager.edit_role(new_role, user_id)
+    
 
 async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if weekly movie quotas is met"""
@@ -152,6 +145,8 @@ async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bo
 
 
 async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    
+    manager = UserManager(update, context)
     args = context.args
 
     if len(args) > 2 or len(args) < 2:
@@ -174,7 +169,7 @@ async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     new_quota = int(args[1])
 
-    edit_user_quota(update, context, target_user_id, new_quota)
+    manager.set_quota(target_user_id, new_quota)
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
