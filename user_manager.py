@@ -14,7 +14,7 @@ class UserManager:
         self.context = context
 
     def get_user_dict(self, target_id: int=None) -> dict:
-
+        """Resturns the users dict from context.bot_data"""
         if target_id:
             user_id = target_id
         else:
@@ -25,20 +25,25 @@ class UserManager:
 
 
     def get_role(self, target_id: int=None) -> str:
+        """returns users role"""
         return self.get_user_dict(target_id).get("role")
     
 
     def get_quota(self) -> int:
+        """returns """
         return self.get_user_dict().get("quota")
 
 
     def set_quota(self, target_id: int=None, new_quota: int=0):
+        """sets new quota users"""
+        if new_quota < 0:
+            new_quota = 0
         user_dict =  self.get_user_dict(target_id)["quota"]
         user_dict["quota"] = new_quota
 
 
     def edit_role(self, new_role: str, target_id: int=None) -> bool:
-
+        """edits role for user"""
         new_role = new_role.lower()
 
         # check valid roles
@@ -58,10 +63,12 @@ class UserManager:
     
 
     def get_recent_movies(self) -> list:
+        """returns list of recent movies"""
         return self.context.user_data.get("recent movies", [])
     
-    
+
     def isOwner(self, target_id: int=None) -> bool:
+        """returns true if user is bot owner"""
         if self.get_role(target_id) == "owner":
             return True
         return False
