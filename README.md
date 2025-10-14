@@ -1,6 +1,6 @@
 TODO
 - Fix recent movies status for users
-- Make owner notification for radarr health status
+- Setup persistent
 - Fix python requirements!
 
 
@@ -14,3 +14,8 @@ commands
 - set_role
 - set_quota
 - users
+
+planned commands:
+- unclaim
+- status
+
