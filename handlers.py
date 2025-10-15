@@ -22,8 +22,6 @@ from helpers import(
     get_user,
     get_tag,
     add_notification,
-    add_user,
-    update_recent_movies,
 )
 
 # config variables
@@ -77,7 +75,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """claiming ownerhip of bot"""
     user = UserManager(update, context)
-    await add_user(update, context)
+    user.add_user()
     if "owner" in context.bot_data:
         logger.info("There already exist a owner for this bot")
         await update.message.reply_html(text="There already is an owner for this bot")
@@ -132,21 +130,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.info(f"Changeing role for {user_id} to {args[0]}")
-    await manager.edit_role(new_role, user_id)
-    
-
-async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if weekly movie quotas is met"""
-    update_recent_movies(context)
-    user = UserManager(update, context)
-    recent_movie_list = user.get_recent_movies()
-    quota = user.get_quota()
-    if len(recent_movie_list) >= quota and user.get_role() == "user":
-        logger.info(f"User has met their weekly quota of {quota} movies. Aborting")
-        await update.message.reply_html(text=f"Your weekly quota of {quota} has been met. \
-        You have to wait before adding another movie")
-        return True
-    return False
+    await manager.edit_role(new_role, user_id)   
 
 
 async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -262,10 +246,11 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Entry of conversation")
 
     # check users
-    await add_user(update, context)
+    user = UserManager(update, context)
+    user.add_user()
 
     # check quotas
-    if await check_quotas(update, context):
+    if await user.met_quota():
         return ConversationHandler.END
 
     await update.message.reply_html(
@@ -356,7 +341,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         recent_movie_list = context.user_data.get("recent movies", [])
         recent_movie_list.append(datetime.now())
-        context.user_data.setdefault("recent movies", recent_movie_list)
+        context.user_data["recent movies"] = recent_movie_list
     
     context.user_data["movies"].clear()
     return ConversationHandler.END

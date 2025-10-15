@@ -1,5 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from constants import DEFAULT_QUOTA
+from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ class UserManager:
         return self.get_user_dict().get("quota")
 
     @required_roles("owner", "admin")
-    def set_quota(self, target_id: int=None, new_quota: int=0):
+    async def set_quota(self, target_id: int=None, new_quota: int=0):
         """sets new quota users"""
         if new_quota < 0:
             new_quota = 0
@@ -61,7 +63,7 @@ class UserManager:
         user_dict["quota"] = new_quota
 
     @required_roles("owner")
-    def edit_role(self, new_role: str, target_id: int=None) -> bool:
+    async def edit_role(self, new_role: str, target_id: int=None) -> bool:
         """edits role for user"""
         new_role = new_role.lower()
 
@@ -86,8 +88,40 @@ class UserManager:
         return self.context.user_data.get("recent movies", [])
     
 
+    def add_user(self) -> None:
+        """Adds user to bot_data users list"""
+        users = self.context.bot_data.setdefault("users", {})
+
+        # Add to list of users
+        if self.id not in users:
+            logger.info(f"adding user: {self.user.full_name} to list of users")
+            self.context.bot_data["users"].setdefault(self.id, {
+            "role": "user",
+            "username": self.user.username,
+            "name": self.user.full_name,
+            "quota": DEFAULT_QUOTA
+            }) 
+
+
     def isOwner(self, target_id: int=None) -> bool:
         """returns true if user is bot owner"""
         if self.get_role(target_id) == "owner":
+            return True
+        return False
+    
+    async def met_quota(self) -> bool:
+        """Check if weekly movie quotas is met. Returns true if met"""
+        # update recent movie list
+        current_list = self.context.user_data.get("recent movies", [])
+        limit = datetime.now() - timedelta(days=7)
+        new_list = [t for t in current_list if t > limit]
+        self.context.user_data["recent movies"] = new_list
+
+        # check if quota been met
+        quota = self.get_quota()
+        if len(new_list) >= quota and self.get_role() == "user":
+            logger.info(f"User has met their weekly quota of {quota} movies. Aborting")
+            await self.update.message.reply_html(text=f"Your weekly quota of {quota} has been met. \
+            You have to wait before adding another movie")
             return True
         return False
