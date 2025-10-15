@@ -59,8 +59,8 @@ class UserManager:
         """sets new quota users"""
         if new_quota < 0:
             new_quota = 0
-        user_dict =  self.get_user_dict(target_id)["quota"]
-        user_dict["quota"] = new_quota
+        self.get_user_dict(target_id)["quota"] = new_quota
+
 
     @required_roles("owner")
     async def edit_role(self, new_role: str, target_id: int=None) -> bool:
@@ -85,7 +85,13 @@ class UserManager:
 
     def get_recent_movies(self) -> list:
         """returns list of recent movies"""
-        return self.context.user_data.get("recent movies", [])
+        # update recent movie list
+        current_list = self.context.user_data.get("recent movies", [])
+        limit = datetime.now() - timedelta(days=7)
+        new_list = [t for t in current_list if t > limit]
+        self.context.user_data["recent movies"] = new_list
+
+        return new_list
     
 
     def add_user(self) -> None:
@@ -111,17 +117,13 @@ class UserManager:
     
     async def met_quota(self) -> bool:
         """Check if weekly movie quotas is met. Returns true if met"""
-        # update recent movie list
-        current_list = self.context.user_data.get("recent movies", [])
-        limit = datetime.now() - timedelta(days=7)
-        new_list = [t for t in current_list if t > limit]
-        self.context.user_data["recent movies"] = new_list
 
-        # check if quota been met
+        recent_movies = self.get_recent_movies()
         quota = self.get_quota()
-        if len(new_list) >= quota and self.get_role() == "user":
+        if len(recent_movies) >= quota and self.get_role() == "user":
             logger.info(f"User has met their weekly quota of {quota} movies. Aborting")
             await self.update.message.reply_html(text=f"Your weekly quota of {quota} has been met. \
             You have to wait before adding another movie")
             return True
         return False
+    
