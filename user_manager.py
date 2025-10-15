@@ -29,7 +29,7 @@ class UserManager:
                         )
                     return
 
-                return func(*args, **kwargs)
+                return await func(*args, **kwargs)
             return wrapper_required_roles
         return decorator
 
@@ -56,10 +56,12 @@ class UserManager:
 
     @required_roles("owner", "admin")
     async def set_quota(self, target_id: int=None, new_quota: int=0):
-        """sets new quota users"""
+        """sets new quota for users"""
         if new_quota < 0:
             new_quota = 0
-        self.get_user_dict(target_id)["quota"] = new_quota
+
+        user_dict = self.get_user_dict(target_id)
+        user_dict["quota"] = new_quota
 
 
     @required_roles("owner")
