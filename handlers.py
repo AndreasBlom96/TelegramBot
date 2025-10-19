@@ -173,6 +173,11 @@ async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await manager.set_quota(target_user_id, new_quota)
 
+
+async def get_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Get status of recent movies"""
+    return
+
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parses the CallbackQuery and updates the message text."""
@@ -353,7 +358,8 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="Movie Added!"
         )
         recent_movie_list = context.user_data.get("recent movies", [])
-        recent_movie_list.append(datetime.now())
+        new_data = (movie["title"], datetime.now())
+        recent_movie_list.append(new_data)
         context.user_data["recent movies"] = recent_movie_list
     
     context.user_data["movies"].clear()

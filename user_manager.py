@@ -91,7 +91,7 @@ class UserManager:
         # update recent movie list
         current_list = self.context.user_data.get("recent movies", [])
         limit = datetime.now() - timedelta(days=7)
-        new_list = [t for t in current_list if t > limit]
+        new_list = [t for t in current_list if t[1] > limit]
         self.context.user_data["recent movies"] = new_list
 
         return new_list
@@ -117,6 +117,7 @@ class UserManager:
         if self.get_role(target_id) == "owner":
             return True
         return False
+    
     
     async def met_quota(self) -> bool:
         """Check if weekly movie quotas is met. Returns true if met"""
