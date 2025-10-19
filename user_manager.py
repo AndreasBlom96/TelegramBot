@@ -16,10 +16,11 @@ class UserManager:
         self.context = context
         self.update = update
 
-    @staticmethod
+    
     def required_roles(*roles):
         def decorator(func):
-            async def wrapper_required_roles(self, *args,**kwargs):
+            async def wrapper_required_roles(*args,**kwargs):
+                self = args[0]
                 if self.get_role() not in roles:
                     logger.warning(
                         "you do not have the rights for this operation"

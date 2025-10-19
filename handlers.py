@@ -101,40 +101,53 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Changes role of a users"""
 
+    logger.info(f"set_role called with args: {context.args}")
     manager = UserManager(update, context)
     users = context.bot_data["users"]
 
     args = context.args
     if len(args) < 2 or len(args) > 2:
         # wrong number of args
-        await update.message.reply_html(text=f"exptected 2 arguments, got {len(args)}")
+        await update.message.reply_html(text=f"Expected 2 arguments, got {len(args)}")
         return
 
+    user_id = args[0]
+    # check if user_id is digit
+    if not user_id.isdigit():
+        await update.message.reply_text(text="user_id must be a digit")
+        return
+
+    user_id = int(user_id)
     # check first argument
-    valid_first_args = ["admin", "user"]
-    if args[0] not in valid_first_args:
-        await update.message.reply_html(text="not a valid role. Must be admin or user")
-        return
-    new_role = args[0]
-
-    user_id = int(args[1])
-    # check second argument
     if user_id not in users:
         await update.message.reply_html(text="user_id is not known to bot, check /users")
         return
 
+    # check second argument
+    valid_first_args = ["admin", "user"]
+    new_role = args[1].strip().lower()
+    if new_role not in valid_first_args:
+        await update.message.reply_html(text="Not a valid role. Must be admin or user")
+        return
+
+    
     # check role of target user
     if manager.isOwner(user_id):
         await update.message.reply_html(text="Cant change role of owner")
         logger.warning("Cant change role of owner")
         return
 
-    logger.info(f"Changeing role for {user_id} to {args[0]}")
-    await manager.edit_role(new_role, user_id)   
+    
+    if await manager.edit_role(new_role, user_id):
+        logger.info(f"Changeing role for {user_id} to {new_role}")
+        await update.message.reply_html(text="Changeing role for {user_id} to {new_role}")
+    else:
+        await update.message.reply_html(text="Failed to set new role")
 
 
 async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
+    logger.info(f"edit_quota was called with args: {context.args}")
     manager = UserManager(update, context)
     args = context.args
 
