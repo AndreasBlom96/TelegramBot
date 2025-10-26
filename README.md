@@ -1,15 +1,16 @@
-# 🎬 Radarr Telegram Bot
+# Radarr Telegram Bot
 
+First bigger python project. There is a lot left to do but i dont really have the time! 
 A Telegram bot that integrates with **Radarr** to let users search, add, and manage movies — directly from chat.
 
 ---
 
-## 🚀 Features
-- 🔍 Search for movies via TMDb
-- 🎞️ Add movies to Radarr from Telegram
-- 👥 Role management — owner, admin, user
-- 🎯 Weekly quotas for users
-- 🛠️ Built using `python-telegram-bot` and `Radarr API`
+## Features
+- Search for movies via TMDb
+- Add movies to Radarr from Telegram
+- Role management — owner, admin, user
+- Weekly quotas for users
+- Built using `python-telegram-bot` and `Radarr API`
 
 ---
 
@@ -20,7 +21,7 @@ A Telegram bot that integrates with **Radarr** to let users search, add, and man
 
 ---
 
-## ⚙️ Installation
+## Installation
 
 ```bash
 # 1️⃣ Clone this repo
@@ -36,3 +37,20 @@ pip install -r requirements.txt
 
 # 4️⃣ Create config.env
 cp exampleConfig.env config.env
+
+## Telegram bot commands!
+
+- /start	Starts the bot
+- /movie	Search and add a movie
+- /users	Lists all registered users
+- /claim	Claim bot ownership
+- /set_role <role> <user_id>	Change a user’s role
+- /edit_quota <user_id> <quota>
+
+## TODO!
+
+- setup persistance
+- add commands:
+  - /status
+  - /unclaim?
+- add more functionality with notifications
