@@ -37,6 +37,9 @@ pip install -r requirements.txt
 
 # Create config.env
 cp exampleConfig.env config.env
+
+# Run bot!
+python bot.py
 ```
 
 ---
