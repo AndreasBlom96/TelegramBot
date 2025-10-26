@@ -1,7 +1,7 @@
 # Radarr Telegram Bot
 
 First bigger python project. There is a lot left to do but i dont really have the time! 
-A Telegram bot that integrates with **Radarr** to let users search, add, and manage movies — directly from chat.
+A Telegram bot that integrates with **Radarr** to let users search and add movies from chat.
 
 ---
 
@@ -57,3 +57,4 @@ cp exampleConfig.env config.env
   - /status
   - /unclaim?
 - add more functionality with notifications
+- in future add Sonarr also?
