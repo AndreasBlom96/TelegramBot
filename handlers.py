@@ -22,8 +22,6 @@ from helpers import(
     get_user,
     get_tag,
     add_notification,
-    add_user,
-    update_recent_movies,
 )
 
 # config variables
@@ -77,7 +75,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """claiming ownerhip of bot"""
     user = UserManager(update, context)
-    await add_user(update, context)
+    user.add_user()
     if "owner" in context.bot_data:
         logger.info("There already exist a owner for this bot")
         await update.message.reply_html(text="There already is an owner for this bot")
@@ -103,54 +101,53 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Changes role of a users"""
 
+    logger.info(f"set_role called with args: {context.args}")
     manager = UserManager(update, context)
     users = context.bot_data["users"]
 
     args = context.args
     if len(args) < 2 or len(args) > 2:
         # wrong number of args
-        await update.message.reply_html(text=f"exptected 2 arguments, got {len(args)}")
+        await update.message.reply_html(text=f"Expected 2 arguments, got {len(args)}")
         return
 
+    user_id = args[0]
+    # check if user_id is digit
+    if not user_id.isdigit():
+        await update.message.reply_text(text="user_id must be a digit")
+        return
+
+    user_id = int(user_id)
     # check first argument
-    valid_first_args = ["admin", "user"]
-    if args[0] not in valid_first_args:
-        await update.message.reply_html(text="not a valid role. Must be admin or user")
-        return
-    new_role = args[0]
-
-    user_id = int(args[1])
-    # check second argument
     if user_id not in users:
         await update.message.reply_html(text="user_id is not known to bot, check /users")
         return
 
+    # check second argument
+    valid_first_args = ["admin", "user"]
+    new_role = args[1].strip().lower()
+    if new_role not in valid_first_args:
+        await update.message.reply_html(text="Not a valid role. Must be admin or user")
+        return
+
+    
     # check role of target user
     if manager.isOwner(user_id):
         await update.message.reply_html(text="Cant change role of owner")
         logger.warning("Cant change role of owner")
         return
 
-    logger.info(f"Changeing role for {user_id} to {args[0]}")
-    await manager.edit_role(new_role, user_id)
     
-
-async def check_quotas(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if weekly movie quotas is met"""
-    update_recent_movies(context)
-    user = UserManager(update, context)
-    recent_movie_list = user.get_recent_movies()
-    quota = user.get_quota()
-    if len(recent_movie_list) >= quota and user.get_role() == "user":
-        logger.info(f"User has met their weekly quota of {quota} movies. Aborting")
-        await update.message.reply_html(text=f"Your weekly quota of {quota} has been met. \
-        You have to wait before adding another movie")
-        return True
-    return False
+    if await manager.edit_role(new_role, user_id):
+        logger.info(f"Changeing role for {user_id} to {new_role}")
+        await update.message.reply_html(text="Changeing role for {user_id} to {new_role}")
+    else:
+        await update.message.reply_html(text="Failed to set new role")
 
 
 async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
+    logger.info(f"edit_quota was called with args: {context.args}")
     manager = UserManager(update, context)
     args = context.args
 
@@ -175,6 +172,11 @@ async def edit_quota(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_quota = int(args[1])
 
     await manager.set_quota(target_user_id, new_quota)
+
+
+async def get_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Get status of recent movies"""
+    return
 
 # Inline button
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -262,10 +264,11 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Entry of conversation")
 
     # check users
-    await add_user(update, context)
+    user = UserManager(update, context)
+    user.add_user()
 
     # check quotas
-    if await check_quotas(update, context):
+    if await user.met_quota():
         return ConversationHandler.END
 
     await update.message.reply_html(
@@ -355,8 +358,9 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="Movie Added!"
         )
         recent_movie_list = context.user_data.get("recent movies", [])
-        recent_movie_list.append(datetime.now())
-        context.user_data.setdefault("recent movies", recent_movie_list)
+        new_data = (movie["tmdbId"], datetime.now())
+        recent_movie_list.append(new_data)
+        context.user_data["recent movies"] = recent_movie_list
     
     context.user_data["movies"].clear()
     return ConversationHandler.END
