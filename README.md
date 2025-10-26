@@ -42,12 +42,12 @@ cp exampleConfig.env config.env
 ---
 
 ## Telegram bot commands!
-- /start	Starts the bot
-- /movie	Search and add a movie
-- /users	Lists all registered users
-- /claim	Claim bot ownership
-- /set_role <role> <user_id>	Change a user’s role
-- /edit_quota <user_id> <quota>
+- /start --	Starts the bot
+- /movie --	Search and add a movie
+- /users --	Lists all registered users
+- /claim --	Claim bot ownership
+- /set_role (user_id) (role) --	Change a users role
+- /edit_quota (user_id) (quota) -- change a users quota
 
 ---
 
