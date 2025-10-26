@@ -14,7 +14,7 @@ A Telegram bot that integrates with **Radarr** to let users search, add, and man
 
 ---
 
-## 🧰 Requirements
+## Requirements
 - Python 3.10+
 - A running instance of [Radarr](https://radarr.video/)
 - A Telegram bot token from [BotFather](https://t.me/BotFather)
@@ -24,22 +24,24 @@ A Telegram bot that integrates with **Radarr** to let users search, add, and man
 ## Installation
 
 ```bash
-# 1️⃣ Clone this repo
+# Clone this repo
 git clone https://github.com/AndreasBlom96/TelegramBot
 cd TelegramBot
 
-# 2️⃣ Create virtual environment
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate   # On Windows: venv\Scripts\activate
 
-# 3️⃣ Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4️⃣ Create config.env
+# Create config.env
 cp exampleConfig.env config.env
+```
+
+---
 
 ## Telegram bot commands!
-
 - /start	Starts the bot
 - /movie	Search and add a movie
 - /users	Lists all registered users
@@ -47,8 +49,9 @@ cp exampleConfig.env config.env
 - /set_role <role> <user_id>	Change a user’s role
 - /edit_quota <user_id> <quota>
 
-## TODO!
+---
 
+## TODO!
 - setup persistance
 - add commands:
   - /status
