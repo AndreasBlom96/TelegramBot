@@ -72,7 +72,7 @@ class RadarrClient:
 
     def movie_isAvailable(self, tmdbId: str):
         """checks if movie is available"""
-        resp = self._get_added_movies({"tmdbId": tmdbId})
+        resp = self.get_added_movies({"tmdbId": tmdbId})
         if not resp:
             logger.info("Movie is not added: not available")
             return False
@@ -225,7 +225,7 @@ class RadarrClient:
 
     def movie_status(self, tmdbId: str):
         logger.info("Checking status for movie: %s", tmdbId)
-        movie = self._get_added_movies({"tmdbId": tmdbId})
+        movie = self.get_added_movies({"tmdbId": tmdbId})
         if not movie:
             logger.info("movie %s is not added", tmdbId)
             return "not added"

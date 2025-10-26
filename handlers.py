@@ -358,7 +358,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="Movie Added!"
         )
         recent_movie_list = context.user_data.get("recent movies", [])
-        new_data = (movie["title"], datetime.now())
+        new_data = (movie["tmdbId"], datetime.now())
         recent_movie_list.append(new_data)
         context.user_data["recent movies"] = recent_movie_list
     
