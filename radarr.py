@@ -86,7 +86,8 @@ class RadarrClient:
             response = requests.post(
                 url=f"{self.base_url}{endpoint}",
                 json=data,
-                headers=self.headers
+                headers=self.headers,
+                timeout=10
             )
             response.raise_for_status()
             return response
@@ -152,7 +153,8 @@ class RadarrClient:
                 url=f"{self.base_url}{endpoint}",
                 json=data,
                 headers=self.headers,
-                params=param
+                params=param,
+                timeout=10
             )
             response.raise_for_status()
             return response
@@ -312,9 +314,9 @@ class RadarrClient:
         else:
             notif = self._get(f"/notification/{id}")
 
-        new_data = notif.update(data)
-        endpoint = "/notification/{id}"
-        return self._put(endpoint, new_data)
+        notif.update(data)
+        endpoint = f"/notification/{id}"
+        return self._put(endpoint, notif)
 
 if __name__ == "__main__":
     r = RadarrClient(host=RADARR_HOST, port=RADARR_PORT)
