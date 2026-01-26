@@ -268,7 +268,7 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user.add_user()
 
     # check quotas
-    if await user.met_quota() and user.get_role == "user":
+    if await user.met_quota() and user.get_role() == "user":
         return ConversationHandler.END
 
     await update.message.reply_html(
