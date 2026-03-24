@@ -19,10 +19,16 @@ from constants import (
 )
 
 if __name__ == "__main__":
+    print("starting worlds most awesome bot :) ")
+    print("Builing application....")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-    application.bot_data["radarrClient"] = RadarrClient(API_key=RADARR_API_KEY, host=RADARR_HOST, port=RADARR_PORT)
+    print("done\n")
 
-    
+    print("connecting to radarr...")
+    application.bot_data["radarrClient"] = RadarrClient(API_key=RADARR_API_KEY, host=RADARR_HOST, port=RADARR_PORT)
+    print("done\n")
+
+    print("adding handlers....")
     application.add_handler(conv_handler)
     application.add_handler(start_handler)
     application.add_handler(help_handler)
@@ -33,4 +39,6 @@ if __name__ == "__main__":
     application.add_handler(edit_quota_handler)
 
     application.add_handler(unknown_handler)
+    print("done! \nBot is now running")
+
     application.run_polling()
