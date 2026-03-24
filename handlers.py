@@ -47,7 +47,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = "Write command /movie to start adding movie"
+
+    msg = ""
+
+    #Check if user is admin or owner
+    user = UserManager(update, context)
+    users = context.bot_data.get("users", [])
+
+    if user.id in users:
+        role = user.get_role(user.id)
+        if role == "admin" or role == "owner":
+            msg = "List of owner/admin commands:\n/users - list users\n" \
+            "/set_role (user_id) (role) - changes role of user\n" \
+            "/set_quota (user_id) (quota) - changes quota of user\n"
+    msg = msg + " Write command /movie to start adding movies"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
 
@@ -68,7 +81,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_names.setdefault(users[user]["name"], users[user]["role"])
 
     await update.message.reply_html(
-        text=f"list of users: {users}"
+        text=f"list of users:\n {users}"
     )
 
 
