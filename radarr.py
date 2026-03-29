@@ -52,7 +52,8 @@ class RadarrClient:
                     return tag
 
         logger.info(f"adding label: {label}")
-        return self._post("/tag", body)
+        return self._post("/tag", body).json()
+    
 
     def edit_tag(self, id: int, new_label: str):
         body = {
