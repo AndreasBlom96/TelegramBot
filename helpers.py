@@ -34,11 +34,11 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
                      tagId: int = None, extra = None):
     """Adds notifications to radarr"""
-    r = context.bot_data["radarrClient"]
+    radarr = context.bot_data["radarrClient"] #type: RadarrClient
     user = get_user(update)
     chatId = str(update.effective_chat.id).lower()
     name = user.first_name.lower() + ":" + str(user.id)
-    return r.add_telegram_notification(
+    return radarr.add_telegram_notification(
         name,
         botToken=BOT_TOKEN,
         chatId=chatId,

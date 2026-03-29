@@ -10,6 +10,7 @@ from handlers import (
     claim_owner_handler,
     set_role_handler,
     edit_quota_handler,
+    notif_handler,
 )
 from constants import (
     BOT_TOKEN,
@@ -37,6 +38,7 @@ if __name__ == "__main__":
     application.add_handler(claim_owner_handler)
     application.add_handler(set_role_handler)
     application.add_handler(edit_quota_handler)
+    application.add_handler(notif_handler)
 
     application.add_handler(unknown_handler)
     print("done! \nBot is now running")

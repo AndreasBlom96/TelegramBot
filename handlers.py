@@ -60,7 +60,8 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = "List of owner/admin commands:\n/users - list users\n" \
             "/set_role (user_id) (role) - changes role of user\n" \
             "/set_quota (user_id) (quota) - changes quota of user\n"
-    msg = msg + " Write command /movie to start adding movies"
+    msg = msg + " Write command /movie to start adding movies\n" \
+    "notif (on/off) - enable or disable notifications"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
 
@@ -278,7 +279,15 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # check users
     user = UserManager(update, context)
-    user.add_user()
+    users = context.bot_data.setdefault("users", {})
+
+    # check if user is new
+    if user.id not in users:
+        #user doesnt exist
+        user.add_user()
+        tag = get_tag(update, context)
+        onDownload = context.bot_data["users"][user.id]["notif"]
+        add_notification(update, context, tag["id"], extra={"onDownload": onDownload})
 
     # check quotas
     if await user.met_quota() and user.get_role() == "user":
@@ -343,7 +352,7 @@ async def select_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Add the movie to radarr"""
 
-    radarr = context.bot_data["radarrClient"]
+    radarr = context.bot_data["radarrClient"] # type: RadarrClient
     movie_number = context.user_data["selected_index"]
     movie = context.user_data["movies"][movie_number]
 
@@ -366,7 +375,7 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
             qualityProfileId=4,
             tags=[tag["id"]]
             )
-        add_notification(update, context, tag["id"], extra={"onDownload": True})
+        
         await update.callback_query.edit_message_caption(
             caption="Movie Added!"
         )
@@ -377,6 +386,37 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     context.user_data["movies"].clear()
     return ConversationHandler.END
+
+async def notif(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"notif called with args: {context.args}")
+    manager = UserManager(update, context)
+    user = get_user(update)
+    users = context.bot_data["users"]
+    radarr = context.bot_data["radarrClient"] # type: RadarrClient
+    current_onDOwnload = users[manager.id]["notif"]
+
+    args = context.args
+    if len(args) > 1 or len(args) < 1:
+        # wrong number of args
+        await update.message.reply_html(text=f"Expected 1 arguments, got {len(args)}")
+        return
+
+    arg = args[0]
+    if arg != "on" and arg != "off":
+        await update.message.reply_html(text="invalid argument. valid arguments is 'on' or 'off'")
+
+    onDownload = True if arg == "on" else False
+    if onDownload == current_onDOwnload:
+        #no change, do nothing
+        logger.info(f"notif is already {onDownload}")
+        return
+
+    #else edit notification
+    users[manager.id]["notif"] = onDownload
+    name = user.first_name.lower() + ":" + str(user.id)
+    logger.info(f"notif changes to {onDownload}")
+    radarr.edit_telegram_notification(id=None, name=name, data={"onDownload": onDownload} )
+    return
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -402,6 +442,7 @@ set_role_handler = CommandHandler('set_role', set_role)
 unknown_handler = MessageHandler(filters.COMMAND, unknown)
 movie_button_handler = CallbackQueryHandler(button)
 edit_quota_handler = CommandHandler('set_quota', edit_quota)
+notif_handler = CommandHandler('notif', notif)
 
 
 if __name__ == "__main__":

@@ -82,7 +82,7 @@ class UserManager:
             return False  # user not found
 
         user_dict["role"] = new_role
-        logger.info(f"new role {new_role} set for user {user_dict.get("name")}")
+        logger.info(f"new role {new_role} set for user {user_dict.get('name')}")
         return True
     
 
@@ -108,7 +108,8 @@ class UserManager:
             "role": "user",
             "username": self.user.username,
             "name": self.user.full_name,
-            "quota": DEFAULT_QUOTA
+            "quota": DEFAULT_QUOTA,
+            "notif": True
             }) 
 
 
