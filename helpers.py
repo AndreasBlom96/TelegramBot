@@ -24,7 +24,7 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.debug("Getting tag...")
 
     user_name = str(get_user(update).first_name).lower()
-    label = user_name + ":" + str(update.effective_chat.id).lower()
+    label = user_name + "-" + str(update.effective_chat.id).lower()
 
     # Post_tag will return a tag if it already exsists
     radarr = context.bot_data["radarrClient"] # type: RadarrClient
