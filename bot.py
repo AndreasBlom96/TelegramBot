@@ -16,8 +16,15 @@ from constants import (
     BOT_TOKEN,
     RADARR_API_KEY,
     RADARR_HOST,
-    RADARR_PORT
+    RADARR_PORT,
+    DEFAULT_USERS,
 )
+
+#search if owner is in default users
+owner_id = None
+for user in DEFAULT_USERS.keys():
+    if DEFAULT_USERS[user]["role"] == "owner":
+        owner_id = user   
 
 if __name__ == "__main__":
     print("starting worlds most awesome bot :) ")
@@ -28,6 +35,13 @@ if __name__ == "__main__":
     print("connecting to radarr...")
     application.bot_data["radarrClient"] = RadarrClient(API_key=RADARR_API_KEY, host=RADARR_HOST, port=RADARR_PORT)
     print("done\n")
+
+    print("Adding default users...")
+    application.bot_data["users"] = DEFAULT_USERS
+    if owner_id:
+        print("Adding owner")
+        application.bot_data["owner"] = owner_id
+    print("done")
 
     print("adding handlers....")
     application.add_handler(conv_handler)

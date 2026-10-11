@@ -61,7 +61,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "/set_role (user_id) (role) - changes role of user\n" \
             "/set_quota (user_id) (quota) - changes quota of user\n"
     msg = msg + " Write command /movie to start adding movies\n" \
-    "notif (on/off) - enable or disable notifications"
+    "/notif (on/off) - enable or disable notifications"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
 
 
@@ -77,12 +77,20 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = context.bot_data.get("users", {})
-    user_names = {}
-    for user in users:
-        user_names.setdefault(users[user]["name"], users[user]["role"])
+    #user_names = {}
+    #for user in users:
+    #    user_names.setdefault(users[user]["name"], users[user]["role"])
+    text = "List of users:\n" + "\n".join(
+        f"ID: {user_id}, "
+        f"Name: {user['name']}, "
+        f"Role: {user['role']}, "
+        f"Quota: {user['quota']}, "
+        f"Notif: {user['notif']}\n"
+        for user_id, user in users.items()
+    ) 
 
     await update.message.reply_html(
-        text=f"list of users:\n {users}"
+        text=text
     )
 
 
