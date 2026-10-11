@@ -154,7 +154,7 @@ async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if await manager.edit_role(new_role, user_id):
         logger.info(f"Changeing role for {user_id} to {new_role}")
-        await update.message.reply_html(text="Changeing role for {user_id} to {new_role}")
+        await update.message.reply_html(text=f"Changeing role for {user_id} to {new_role}")
     else:
         await update.message.reply_html(text="Failed to set new role")
 
