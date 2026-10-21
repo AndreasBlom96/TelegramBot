@@ -237,8 +237,8 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         keyboard = [
             [
-                InlineKeyboardButton(text="yes", callback_data=f"add_{current_index}"),
-                InlineKeyboardButton(text="No", callback_data="next_-1")
+                InlineKeyboardButton(text="No", callback_data="next_-1"),
+                InlineKeyboardButton(text="yes", callback_data=f"add_{current_index}")
             ]
         ]
         await query.edit_message_caption(
@@ -457,7 +457,7 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user.id not in users:
         #user doesnt exist
         user.add_user()
-        tag = get_tag(update, context)
+        tag = get_tag(update, context, set_sonar=True)
         #Fix sonarr notification here
 
     #Implement check to see if user is allowed to here

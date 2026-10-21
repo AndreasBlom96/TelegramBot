@@ -318,5 +318,3 @@ if __name__ == "__main__":
     seasons = serie_to_add.number_of_seasons()
     print(f"seasons: {seasons}")
 
-    series_id = series[0]["id"]
-    #sonarr._delete(f"/series/{series_id}")
