@@ -463,7 +463,7 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     #Implement check to see if user is allowed to here
     allowed_series = context.bot_data.get("users").get("allowedSeries", False)
-    if not allowed_series and (user.get_role() == "user"):
+    if (not allowed_series) and (user.get_role() == "user"):
         await update.message.reply_text("You don't have permission to add series. Ask Admin/Owner about permission")
         return ConversationHandler.END
 
@@ -606,13 +606,18 @@ async def select_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             #Row last season
             [
-                InlineKeyboardButton(text="last Season (only if status: ended)",
+                InlineKeyboardButton(text="last Season",
                                     callback_data=f"series_monitor_lastSeason")
             ],
             #Row future season
             [
                 InlineKeyboardButton(text="Future seasons",
                                     callback_data=f"series_monitor_future")
+            ],
+            # existing
+            [
+                InlineKeyboardButton(text="existing",
+                                     callback_data=f"series_monitor_existing")
             ],
             #Row special season
             [
@@ -635,27 +640,28 @@ async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """choose with season to monitor"""
     query = update.callback_query
     await query.answer()
+
+    #Log and get callback data
     logger.info(f"season monitor callback data: {query.data}")
     action = query.data.split("_")[1]
     monitor_seasons = query.data.split("_")[2]
-    logger.info(f"Serie: monitor_chosen: {monitor_seasons}")
-
+ 
+    # get selected series
     selected_index = context.user_data["series_selected_index"]
     serie = context.user_data["series"][selected_index]
     serie = SerieManager(serie)
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
 
-    #get exising tag
+    # fix tags
     added_tags = serie.resource["tags"] #type: list
-    user_tag_label = get_tag(update, context)
-    sonarr_tags = sonarr.get_tags()
-    print(sonarr_tags)
-    for tag in sonarr_tags:
-        if tag["label"] == user_tag_label:
-            tag_id_to_add = tag["id"]
-    tags = serie.resource["tags"].append(tag_id_to_add)
+    user_tag_id = get_tag(update, context, get_sonar=True)["id"]
+    if user_tag_id not in added_tags:
+        added_tags.append(user_tag_id)
 
-    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor_seasons, tags=tags)
+    # add series
+    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor_seasons, tags=added_tags)
+
+    # clear data and done!
     context.user_data["series"].clear()
     await query.edit_message_caption(caption="Series added!", reply_markup=None)
     
@@ -704,7 +710,7 @@ async def series_special_monitor(update: Update, context: ContextTypes.DEFAULT_T
     last_buttons = [
         InlineKeyboardButton(text="back",
                             callback_data=f"series_select_0"),
-        InlineKeyboardButton(text="Done",
+        InlineKeyboardButton(text="Done, add series!",
                             callback_data=f"series_special_done")
     ]
     keyboard.append(last_buttons)
@@ -718,18 +724,28 @@ async def add_seasons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    # get selected series
     selected_index = context.user_data["series_selected_index"] #type: int
     serie = context.user_data["series"][selected_index]
 
+    # fix tags
+    added_tags = serie["tags"] #type: list
+    user_tag_id = get_tag(update, context, get_sonar=True)["id"]
+    if user_tag_id not in added_tags:
+        added_tags.append(user_tag_id)
+
+    # add series
     serie = SerieManager(serie)
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
     seasons_to_add = context.user_data["seasons to add"] # type: list
-    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add)
+    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
 
-    #flush all data
+    # flush all data
     context.user_data["series"].clear()
     context.user_data.pop("seasons to add")
     context.user_data.pop("series_selected_index")
+
+    #Done! 
     await query.edit_message_caption(caption="Series added!", reply_markup=None)
 
 # series handler
