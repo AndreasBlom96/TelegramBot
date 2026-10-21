@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from constants import BOT_TOKEN, DEFAULT_QUOTA
 from user_manager import UserManager
 from radarr import RadarrClient
+from sonarr import SonarrClient
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,9 +26,11 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = str(get_user(update).first_name).lower()
     label = user_name + "-" + str(update.effective_chat.id).lower()
-
+    
     # Post_tag will return a tag if it already exsists
     radarr = context.bot_data["radarrClient"] # type: RadarrClient
+    sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
+    sonarr.post_tag(label)
     return radarr.post_tag(label)
 
 

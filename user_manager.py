@@ -109,7 +109,8 @@ class UserManager:
             "username": self.user.username,
             "name": self.user.full_name,
             "quota": DEFAULT_QUOTA,
-            "notif": True
+            "notif": True,
+            "allowedSeries": False
             }) 
 
 

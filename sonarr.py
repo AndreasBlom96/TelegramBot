@@ -1,0 +1,323 @@
+import requests
+import logging
+from serie import SerieManager
+from constants import (
+    SONARR_API_KEY,
+    SONARR_HOST,
+    SONARR_PORT
+)
+
+# logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+logger = logging.getLogger(__name__)
+
+
+class SonarrClient:
+
+    def __init__(self, API_key=SONARR_API_KEY, host="localhost", port="8989"):
+        self.API_key = API_key
+        self.base_url = f"http://{host}:{port}/api/v3"
+        self.headers = {"X-Api-Key": self.API_key}
+        self.rootFolder = self._getRootFolder()
+
+    def _post(self, endpoint: str, data=None):
+        """request POST method that's safe and catches most error"""
+        try:
+            response = requests.post(
+                url=f"{self.base_url}{endpoint}",
+                json=data,
+                headers=self.headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+
+    def _get(self, endpoint: str, params=None):
+        """request get method that is safe and catches most errors"""
+
+        try:
+            response = requests.get(
+                f"{self.base_url}{endpoint}",
+                params=params,
+                headers=self.headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not data:
+                return None
+            return data
+
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Could not connect to Radarr at {self.base_url}{endpoint}")
+        except requests.exceptions.Timeout:
+            logger.error("Connection timed out")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"unexpected error: {e}")
+        return None
+
+    def _delete(self, endpoint):
+        """request DELETE method that's safe and catches most error"""
+        try:
+            response = requests.delete(
+                url=f"{self.base_url}{endpoint}",
+                headers=self.headers,
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+
+    def _put(self, endpoint, data=None, param=None):
+        """request PUT method that's safe and catches most error"""
+        try:
+            response = requests.put(
+                url=f"{self.base_url}{endpoint}",
+                json=data,
+                headers=self.headers,
+                params=param,
+                timeout=10
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            try:
+                error_info = response.json()
+                logger.error(f"{response.status_code}: {error_info}")
+            except ValueError:
+                logger.info(f"HTTP error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Unexpected error: {e}")
+        return None
+
+    def _getRootFolder(self):
+        response = self._get("/rootfolder")
+
+        if not response:
+            logger.info("could not find rootfolder")
+            return None
+        else:
+            return response[0]['path']
+
+    def get_tags(self):
+        """returns list of tags"""
+        logger.info("Fetching tags!")
+        return self._get("/tag")
+
+    def post_tag(self, label: str):
+        label = label.lower()
+        body = {
+            "label": label
+        }
+
+        # check if tag already exist
+        list_tags = self.get_tags()
+        if list_tags:
+            for tag in list_tags:
+                if tag["label"] == label:
+                    logger.info("tag already exists")
+                    return tag
+
+        logger.info(f"adding label: {label}")
+        return self._post("/tag", body).json()
+    
+    def edit_tag(self, id: int, new_label: str):
+        body = {
+            "label": new_label
+        }
+        logger.info("Editing tag with new label")
+        return self._put(f"/tag/{id}", data=body)
+
+    def delete_tag(self, id: int):
+        """delete tag with id"""
+        logger.info(f"Deleting tag with id: {id}")
+        return self._delete(f"/tag/{id}")
+
+    def get_added_series(self, id: int = None, tvdbId: int = None):
+        """returns list of all added series. If param, returns the series with param id"""
+        if (not id) and (not tvdbId):
+            return self._get("/series")
+        elif id:
+            return self._get(f"/series/{id}")
+        elif tvdbId:
+            param ={
+                "tvdbId": tvdbId,
+                "includeSeasonImages": "false"
+            }
+            return self._get("/series", param)
+        return None
+
+    def search_series(self, query: str):
+        """Search for a serie by title"""
+        endpoint = "/series/lookup"
+        logger.info("searching for series %s", query)
+        return self._get(endpoint, {"term": query})
+
+    def add_serie(self, serie: SerieManager, qualityProfileId: int, monitor: str, tags=[], seasons_to_add: list=[]):
+        """Adds series to Sonarr and start searching and downloading"""
+        logger.info("adding series to sonarr: %s", serie.resource["title"])
+
+        #see if we already have series
+        found_serie = self.get_added_series(id=None, tvdbId=serie.resource["tvdbId"])
+        if found_serie:
+            logger.info("Serie is already added, aborting")
+            return None
+
+        payload = serie.build_add_payload(
+            qualityProfileId, 
+            f"{self.rootFolder}/{serie.resource["title"]}",
+            self.rootFolder,
+            monitor,
+            tags,
+            seasons_to_add
+            )
+        
+        return self._post("/series", payload)
+
+    def add_tag_serie(self, series_id: int, tagId: int = None):
+        """adds tag to serie"""
+
+        serie = self._get(f"/serie/{series_id}")
+
+        tag_list = []
+
+        if len(serie["tags"]) > 0:
+            tags = serie["tags"]
+            for tag_id in tags:
+                tag_list.append(tag_id)
+
+        if tagId is not None:
+            tag_list.append(tagId)
+
+        body = {
+            "tags": tag_list
+        }
+        serie.update(body)
+        self._put(f"/series/{series_id}", serie)
+
+    def serie_status(self):
+        """return status for series. Like monitored seasons and stuff maybe?"""
+        return None
+
+
+###These functions are not modified from radarr.py and will not work until fixed
+    def get_telegram_notifications(self):
+        """Get list of notifications"""
+        return self._get("/notification")
+      
+    def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int = None, extra=None):
+        """Adds a telegram notification, returns None if the Name already exists"""
+        endpoint = "/notification"
+
+        if tagId is None:
+            tags = []
+        else:
+            tags = [tagId]
+
+        body = {
+            "configContract": "TelegramSettings",
+            "implementation": "Telegram",
+            "name": name,
+            "fields": [
+                {"name": "botToken", "value": botToken},
+                {"name": "chatId", "value": chatId}
+            ],
+            "tags": tags
+        }
+
+        if extra is not None:
+            body.update(extra)
+
+        notif = self.get_notification_by_name(name)
+        if notif:
+            logger.info("editing existing telegram notification")
+            notif.update(extra)
+
+            old_tags = notif.get("tags", [])
+            new_tags = list(set(old_tags + tags))
+            notif["tags"] = new_tags
+
+            endpoint = endpoint + "/" + str(notif["id"])
+            self._put(endpoint, notif)
+            return notif
+
+        logger.info(f"Adding telegram notification for chatId: {chatId}")
+        return self._post(endpoint, body)
+
+    def get_notification_by_name(self, name: str) -> dict:
+        """Returns notification by name if it exists. Otherwise it returns None"""
+        notifs = self.get_telegram_notifications()
+
+        if notifs:
+            for notif in notifs:
+                if notif["name"] == name:
+                    return notif
+        return {}
+
+    def delete_telegram_notification(self, id: int, name: str = None):
+        """Deletes notification by name or id"""
+        if id is None:
+            id = self.get_notification_by_name(name)["id"]
+
+        logger.info(f"Deleting notification id: {id}, name: {name}")
+        endpoint = f"/notification/{id}"
+        return self._delete(endpoint)
+
+    def edit_telegram_notification(self, id: int, name: str = None, data=None):
+        """edits a telegram notification by name or id. Data should be dict with changed values"""
+        if (id is None) and name is not None:
+            notif = self.get_notification_by_name(name)
+            id = notif["id"]
+        else:
+            notif = self._get(f"/notification/{id}")
+
+        notif.update(data)
+        endpoint = f"/notification/{id}"
+        return self._put(endpoint, notif)
+
+if __name__ == "__main__":
+    sonarr = SonarrClient(host=SONARR_HOST, port=SONARR_PORT)
+
+    resp = sonarr.search_series("Breaking bad")
+    serie_to_add = SerieManager(resp[0])
+    #for key, value in resp[0].items():
+    #    print(f"{key}: ")
+    #    print(f"{value}\n")
+
+    ## ADD a serie!
+    add_resp = sonarr.add_serie(serie_to_add, 4, "latestSeason")
+    print(add_resp)
+
+    # get a added serie
+    series = sonarr.get_added_series()
+    #for key, value in series[0].items():
+    #    print(f"{key}:")
+    #    print(f"{value}\n")
+
+    seasons = serie_to_add.number_of_seasons()
+    print(f"seasons: {seasons}")
+
+    series_id = series[0]["id"]
+    #sonarr._delete(f"/series/{series_id}")

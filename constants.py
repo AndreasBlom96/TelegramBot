@@ -1,10 +1,17 @@
 import os
 from dotenv import load_dotenv
 
-# config variables
-load_dotenv(dotenv_path="config.env")
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+QUALITY_PTOFILE_1080P = 4
 DEFAULT_QUOTA = 0
+DEFAULT_PHOTO = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
+
+# config variables
+load_dotenv(dotenv_path="sonarr_test_config.env")
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+SONARR_API_KEY = os.getenv('SONARR_API_KEY')
+SONARR_HOST = os.getenv('SONARR_HOST')
+SONARR_PORT = os.getenv('SONARR_PORT')
 
 RADARR_API_KEY = os.getenv('RADARR_API_KEY')
 RADARR_HOST = os.getenv('RADARR_HOST')
@@ -27,7 +34,8 @@ if owner_string:
                 "username": None,
                 "name": owner_name,
                 "quota": DEFAULT_QUOTA,
-                "notif": True
+                "notif": True,
+                "allowedSeries": True
                 })
 
 
@@ -50,5 +58,6 @@ for id, name in admins:
             "username": None,
             "name": name,
             "quota": DEFAULT_QUOTA,
-            "notif": True
+            "notif": True,
+            "allowedSeries": True
             })
