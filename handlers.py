@@ -442,7 +442,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ENTRY_SERIES, SELECT_SERIES = range(2)
 
 #TODO
-#add tagging...
 #add notifaction
 #fix such that if serie is already added, we modify instead.
 
@@ -652,6 +651,14 @@ async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     serie = SerieManager(serie)
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
 
+    #check if series is added
+    existing = sonarr.get_added_series(tvdbId=serie.resource["tvdbId"])
+    if existing:
+        logger.info(f"Series already exist")
+        context.user_data["series"].clear()
+        await query.edit_message_caption(caption="series already exist!", reply_markup=None)
+        return
+
     # fix tags
     added_tags = serie.resource["tags"] #type: list
     user_tag_id = get_tag(update, context, get_sonar=True)["id"]
@@ -726,7 +733,7 @@ async def add_seasons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # get selected series
     selected_index = context.user_data["series_selected_index"] #type: int
-    serie = context.user_data["series"][selected_index]
+    serie = context.user_data["series"][selected_index] #type: dict
 
     # fix tags
     added_tags = serie["tags"] #type: list
@@ -734,9 +741,17 @@ async def add_seasons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_tag_id not in added_tags:
         added_tags.append(user_tag_id)
 
-    # add series
-    serie = SerieManager(serie)
+    #check if series is added
+    serie = SerieManager(serie) # type: SerieManager
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
+    result = sonarr.get_added_series(tvdbId=serie.resource["tvdbId"])
+    if result:
+        logger.info(f"Series already exist")
+        context.user_data["series"].clear()
+        await query.edit_message_caption(caption="series already exist!", reply_markup=None)
+        return
+
+    # add series
     seasons_to_add = context.user_data["seasons to add"] # type: list
     sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
 

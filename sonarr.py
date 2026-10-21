@@ -163,8 +163,7 @@ class SonarrClient:
             return self._get(f"/series/{id}")
         elif tvdbId:
             param ={
-                "tvdbId": tvdbId,
-                "includeSeasonImages": "false"
+                "tvdbId": tvdbId
             }
             return self._get("/series", param)
         return None
