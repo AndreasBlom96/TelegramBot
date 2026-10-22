@@ -53,7 +53,12 @@ class RadarrClient:
 
         logger.info(f"adding label: {label}")
         return self._post("/tag", body).json()
-    
+
+    def ping(self):
+        """ping radarr"""
+        url = self.base_url.rsplit("/",2)[0]
+        response = requests.get(url, timeout=5)
+        return response.status_code
 
     def edit_tag(self, id: int, new_label: str):
         body = {

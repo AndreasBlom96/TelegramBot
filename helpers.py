@@ -51,3 +51,12 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
         extra=extra
      )
 
+def ping_sonarr(context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """See if sonarr is alive"""
+    sonarr = context.bot_data["sonarrClient"]
+    return sonarr.ping()==200
+
+def ping_radarr(context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """See if radar is alive"""
+    radarr = context.bot_data["radarrClient"] #type: RadarrClient
+    return radarr.ping()==200

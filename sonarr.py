@@ -45,6 +45,12 @@ class SonarrClient:
             logger.error(f"Unexpected error: {e}")
         return None
 
+    def ping(self) -> bool:
+        """Ping sonarr"""
+        url = self.base_url.rsplit("/",2)[0]
+        response = requests.get(url,timeout=5)
+        return response.status_code
+
     def _get(self, endpoint: str, params=None):
         """request get method that is safe and catches most errors"""
 
@@ -317,4 +323,5 @@ if __name__ == "__main__":
 
     seasons = serie_to_add.number_of_seasons()
     print(f"seasons: {seasons}")
+    print(sonarr.ping())
 

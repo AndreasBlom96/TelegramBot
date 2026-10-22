@@ -25,6 +25,8 @@ from helpers import(
     get_user,
     get_tag,
     add_notification,
+    ping_sonarr,
+    ping_radarr,
 )
 
 # config variables
@@ -296,6 +298,11 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = UserManager(update, context)
     users = context.bot_data.setdefault("users", {})
 
+    # See if radarr is reachable
+    if not ping_radarr():
+        await update.message.reply_text("Radarr not reachable, check connection or config file")
+        return ConversationHandler.END
+
     # check if user is new
     if user.id not in users:
         #user doesnt exist
@@ -452,6 +459,11 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = context.bot_data.setdefault("users", {})
 
     logger.info(f"User {user.user.full_name} enters series conversation")
+
+    #check if sonarr is reachable
+    if not ping_sonarr():
+        update.message.reply_text("Sonarr not reachable. Check connection or config file")
+        return ConversationHandler.END
 
     # check if user is new
     if user.id not in users:
