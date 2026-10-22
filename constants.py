@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-QUALITY_PTOFILE_1080P = 4
+QUALITY_PROFILE_1080P = 4
 DEFAULT_QUOTA = 0
 DEFAULT_PHOTO = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
 

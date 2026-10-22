@@ -20,7 +20,7 @@ from user_manager import UserManager
 from radarr import RadarrClient
 from sonarr import SonarrClient
 from serie import SerieManager
-from constants import BOT_TOKEN, DEFAULT_QUOTA, DEFAULT_PHOTO, QUALITY_PTOFILE_1080P
+from constants import BOT_TOKEN, DEFAULT_QUOTA, DEFAULT_PHOTO, QUALITY_PROFILE_1080P
 from helpers import(
     get_user,
     get_tag,
@@ -462,7 +462,7 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     #check if sonarr is reachable
     if not ping_sonarr():
-        update.message.reply_text("Sonarr not reachable. Check connection or config file")
+        await update.message.reply_text("Sonarr not reachable. Check connection or config file")
         return ConversationHandler.END
 
     # check if user is new
@@ -473,7 +473,7 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         #Fix sonarr notification here
 
     #Implement check to see if user is allowed to here
-    allowed_series = context.bot_data.get("users").get("allowedSeries", False)
+    allowed_series = users.get(user.id).get("allowedSeries", False)
     if (not allowed_series) and (user.get_role() == "user"):
         await update.message.reply_text("You don't have permission to add series. Ask Admin/Owner about permission")
         return ConversationHandler.END
@@ -517,10 +517,10 @@ async def select_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     markup = InlineKeyboardMarkup(keyboard)
 
-    serie = series[index]
-    overview = serie["overview"]
+    serie = series[index] # type: dict
+    overview = serie.get("overview", "Missing overview")
     if len(overview) > MAX_OVERVIEW_CHARS:
-        overview[:MAX_OVERVIEW_CHARS] + "..."
+        overview = overview[:MAX_OVERVIEW_CHARS] + "..."
     
     default_photo = DEFAULT_PHOTO
     photo_url = default_photo
@@ -572,7 +572,7 @@ async def browse_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
     serie = context.user_data["series"][current_index]
     overview = serie.get("overview", "Missing overview")
     if len(overview) > MAX_OVERVIEW_CHARS:
-        overview[:MAX_OVERVIEW_CHARS] + "..."
+        overview = overview[:MAX_OVERVIEW_CHARS] + "..."
         
     default_photo = DEFAULT_PHOTO
     photo_url = default_photo
@@ -678,7 +678,7 @@ async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         added_tags.append(user_tag_id)
 
     # add series
-    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor_seasons, tags=added_tags)
+    sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor_seasons, tags=added_tags)
 
     # clear data and done!
     context.user_data["series"].clear()
@@ -765,7 +765,7 @@ async def add_seasons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # add series
     seasons_to_add = context.user_data["seasons to add"] # type: list
-    sonarr.add_serie(serie, QUALITY_PTOFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
+    sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
 
     # flush all data
     context.user_data["series"].clear()
