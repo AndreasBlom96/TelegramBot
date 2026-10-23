@@ -659,13 +659,12 @@ async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
  
     # get selected series
     selected_index = context.user_data["series_selected_index"]
-    serie = context.user_data["series"][selected_index]
-    serie = SerieManager(serie)
+    selected_series_data = context.user_data["series"][selected_index]
+    serie = SerieManager(selected_series_data)
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
 
     #check if series is added
-    existing = sonarr.get_added_series(tvdbId=serie.resource["tvdbId"])
-    if existing:
+    if sonarr.get_added_series(tvdbId=serie.resource["tvdbId"]):
         logger.info(f"Series already exist")
         context.user_data["series"].clear()
         await query.edit_message_caption(caption="series already exist!", reply_markup=None)
