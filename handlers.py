@@ -299,7 +299,7 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = context.bot_data.setdefault("users", {})
 
     # See if radarr is reachable
-    if not ping_radarr():
+    if not ping_radarr(context):
         await update.message.reply_text("Radarr not reachable, check connection or config file")
         return ConversationHandler.END
 
@@ -463,7 +463,7 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {user.user.full_name} enters series conversation")
 
     #check if sonarr is reachable
-    if not ping_sonarr():
+    if not ping_sonarr(context):
         await update.message.reply_text("Sonarr not reachable. Check connection or config file")
         return ConversationHandler.END
 
