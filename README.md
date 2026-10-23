@@ -10,13 +10,14 @@ A Telegram bot that integrates with **Radarr** to let users search and add movie
 - Add movies to Radarr from Telegram
 - Role management — owner, admin, user
 - Weekly quotas for users
-- Built using `python-telegram-bot` and `Radarr API`
+- Built using `python-telegram-bot`, `Radarr API` and `Sonarr API`
 
 ---
 
 ## Requirements
 - Python 3.10+
 - A running instance of [Radarr](https://radarr.video/)
+- A running instance of [Sonarr](https://radarr.video/)
 - A Telegram bot token from [BotFather](https://t.me/BotFather)
 
 ---
@@ -36,7 +37,7 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create config.env
-cp exampleConfig.env config.env
+cp exampleConfig.env config.env (make sure constant.py points to correct config.env file)
 
 # Run bot!
 python bot.py
@@ -47,6 +48,7 @@ python bot.py
 ## Telegram bot commands!
 - /start --	Starts the bot
 - /movie --	Search and add a movie
+- /series -- search and add a series
 - /users --	Lists all registered users
 - /claim --	Claim bot ownership
 - /set_role (user_id) (role) --	Change a users role
@@ -58,6 +60,7 @@ python bot.py
 - setup persistance
 - add commands:
   - /status
-  - /unclaim?
+  - set series allowed for users
 - add more functionality with notifications
-- in future add Sonarr also?
+- Notifications for sonarr is not implemented
+- Sonarr edit series monitoring
