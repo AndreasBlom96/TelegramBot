@@ -6,7 +6,7 @@ DEFAULT_QUOTA = 0
 DEFAULT_PHOTO = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboard-computer-icons-film-movie-poster-angle-text-logo-thumbnail.png"
 
 # config variables
-load_dotenv(dotenv_path="sonarr_test_config.env")
+load_dotenv(dotenv_path="config.env")
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 SONARR_API_KEY = os.getenv('SONARR_API_KEY')
