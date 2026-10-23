@@ -37,7 +37,7 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create config.env
-cp exampleConfig.env config.env
+cp exampleConfig.env config.env (make sure constant.py points to correct config.env file)
 
 # Run bot!
 python bot.py
@@ -60,6 +60,7 @@ python bot.py
 - setup persistance
 - add commands:
   - /status
-  - /unclaim?
+  - set series allowed for users
 - add more functionality with notifications
 - Notifications for sonarr is not implemented
+- Sonarr edit series monitoring
