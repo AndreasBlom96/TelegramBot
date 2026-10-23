@@ -408,12 +408,12 @@ async def add_movie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def notif(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"notif called with args: {context.args}")
     manager = UserManager(update, context)
     user = get_user(update)
     users = context.bot_data["users"]
     radarr = context.bot_data["radarrClient"] # type: RadarrClient
     current_onDOwnload = users[manager.id]["notif"]
+    logger.info(f"{user.first_name} called notif with args: {context.args}")
 
     args = context.args
     if len(args) > 1 or len(args) < 1:
@@ -429,12 +429,14 @@ async def notif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if onDownload == current_onDOwnload:
         #no change, do nothing
         logger.info(f"notif is already {onDownload}")
+        await update.message.reply_html(text=f"Notifications is already {onDownload}")
         return
 
     #else edit notification
     users[manager.id]["notif"] = onDownload
     name = user.first_name.lower() + ":" + str(user.id)
     logger.info(f"notif changes to {onDownload}")
+    await update.message.reply_html(text=f"Notifications changed to {onDownload}")
     radarr.edit_telegram_notification(id=None, name=name, data={"onDownload": onDownload} )
     return
 
