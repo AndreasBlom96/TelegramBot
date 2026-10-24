@@ -452,6 +452,7 @@ ENTRY_SERIES, SELECT_SERIES = range(2)
 
 #TODO
 #add notifaction
+#Update such that you can addOption and specify for each season
 #fix such that if serie is already added, we modify instead.
 
 async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -461,6 +462,13 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = context.bot_data.setdefault("users", {})
 
     logger.info(f"User {user.user.full_name} enters series conversation")
+
+    #reset user data
+    context.user_data["modifying_series"] = False
+    context.user_data["modifying_series_first_enter"] = True
+    context.user_data["seasons to add"] = []
+    if "series" in context.user_data:
+        context.user_data["series"].clear()
 
     #check if sonarr is reachable
     if not ping_sonarr(context):
@@ -600,37 +608,53 @@ async def select_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #save selected index
     context.user_data["series_selected_index"] = current_index
 
+    #check if series is added
+    serie_data = context.user_data["series"][current_index]
+    serie = SerieManager(serie_data)
+    sonarr = context.bot_data["sonarrClient"] #type: SonarrClient
+    existing_serie = sonarr.get_added_series(tvdbId=serie_data["tvdbId"])
+    if existing_serie:
+        logger.info(f"Series already exist, entering editing mode")
+        context.user_data["seasons to add"] = serie.get_monitored_seasons()
+        context.user_data["modifying_series"] = True
+
     #start menu conversation about what seasons to download
     keyboard = [
             #Row All
             [
                 InlineKeyboardButton(text="All",
-                                    callback_data=f"series_monitor_all")
+                                    callback_data=f"series_monitor_all"
+                                    )
             ],
             #Row first season
             [
                 InlineKeyboardButton(text="First Season",
-                                    callback_data=f"series_monitor_firstSeason")
+                                    callback_data=f"series_monitor_firstSeason"
+                                    )
             ],
             #Row latest season
             [
                 InlineKeyboardButton(text="latest Season",
-                                    callback_data=f"series_monitor_latestSeason")
+                                    callback_data=f"series_monitor_latestSeason"
+                                    )
             ],
             #Row last season
             [
                 InlineKeyboardButton(text="last Season",
-                                    callback_data=f"series_monitor_lastSeason")
+                                    callback_data=f"series_monitor_lastSeason"
+                                    )
             ],
             #Row future season
             [
                 InlineKeyboardButton(text="Future seasons",
-                                    callback_data=f"series_monitor_future")
+                                    callback_data=f"series_monitor_future"
+                                    )
             ],
             # existing
             [
                 InlineKeyboardButton(text="existing",
-                                     callback_data=f"series_monitor_existing")
+                                     callback_data=f"series_monitor_existing"
+                                    )
             ],
             #Row special season
             [
@@ -647,7 +671,10 @@ async def select_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     markup = InlineKeyboardMarkup(keyboard)
 
-    await query.edit_message_caption(caption= "choose which seasons to monitor", reply_markup= markup)
+    if context.user_data["modifying_series"]:
+        await query.edit_message_caption(caption="series already exist! Modifying monitoring", reply_markup=markup)
+    else:
+        await query.edit_message_caption(caption= "choose which seasons to monitor", reply_markup=markup)
 
 async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """choose with season to monitor"""
@@ -665,26 +692,19 @@ async def monitor_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     serie = SerieManager(selected_series_data)
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
 
-    #check if series is added
-    if sonarr.get_added_series(tvdbId=serie.resource["tvdbId"]):
-        logger.info(f"Series already exist")
-        context.user_data["series"].clear()
-        await query.edit_message_caption(caption="series already exist!", reply_markup=None)
-        return
-
     # fix tags
     added_tags = serie.resource["tags"] #type: list
     user_tag_id = get_tag(update, context, get_sonar=True)["id"]
     if user_tag_id not in added_tags:
         added_tags.append(user_tag_id)
 
-    # add series
-    sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor_seasons, tags=added_tags)
-
-    # clear data and done!
-    context.user_data["series"].clear()
-    await query.edit_message_caption(caption="Series added!", reply_markup=None)
-    
+    if context.user_data["modifying_series"]:
+        sonarr.edit_series(serie, monitor=monitor_seasons)
+        await query.edit_message_caption(caption="Series modified!", reply_markup=None)
+    else:
+        sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor_seasons, tags=added_tags)
+        await query.edit_message_caption(caption="Series added!", reply_markup=None)
+        
 async def series_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.delete_message() 
@@ -695,9 +715,15 @@ async def series_special_monitor(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
 
-    logger.debug(f"entered series special with data {query.data}")
+    logger.info(f"entered series special with data {query.data}")
+
+    selected_index = context.user_data["series_selected_index"]
+    serie_data = context.user_data["series"][selected_index]
+    serie = SerieManager(serie_data)
+    number_of_seasons = len(serie_data.get("seasons", [])) 
 
     season_to_add = context.user_data.setdefault("seasons to add", []) # type: list
+
     #get callback data
     if ":" in query.data:
         toggle_s = int(query.data.split("_")[1])
@@ -707,21 +733,15 @@ async def series_special_monitor(update: Update, context: ContextTypes.DEFAULT_T
             season_to_add.append(toggle_s)
     else:
         season_to_add = context.user_data.setdefault("seasons to add", [])
-        context.user_data["seasons to add"].clear()
-        
-
-    selected_index = context.user_data["series_selected_index"]
-    serie = context.user_data["series"][selected_index]
-    number_of_seasons = len(serie.get("seasons", []))
-    
+            
     #construct keyboard
     keyboard = []
     row = []
-    for s in range(1,number_of_seasons+1,):
-        row.append(InlineKeyboardButton(text=f"S{s} {CHECK_CHAR if s in season_to_add else UNCHECK_CHAR}",
+    for s in range(0,number_of_seasons):
+        row.append(InlineKeyboardButton(text=f"S{s if s != 0 else "pecials"} {CHECK_CHAR if s in season_to_add else UNCHECK_CHAR}",
                                         callback_data=f"series:season_{s}",
                                         style="success" if s in season_to_add else None))
-        if s % 3 == 0:
+        if (s+1) % 3 == 0 and s != 0:
             keyboard.append(row)
             row = []
     keyboard.append(row)
@@ -754,27 +774,22 @@ async def add_seasons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_tag_id not in added_tags:
         added_tags.append(user_tag_id)
 
+    seasons_to_add = context.user_data["seasons to add"] # type: list
+
     #check if series is added
     serie = SerieManager(serie) # type: SerieManager
     sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
-    result = sonarr.get_added_series(tvdbId=serie.resource["tvdbId"])
-    if result:
-        logger.info(f"Series already exist")
-        context.user_data["series"].clear()
-        await query.edit_message_caption(caption="series already exist!", reply_markup=None)
-        return
-
-    # add series
-    seasons_to_add = context.user_data["seasons to add"] # type: list
-    sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
+    if context.user_data["modifying_series"]:
+        sonarr.edit_series(serie, seasons_to_add=seasons_to_add)
+        await query.edit_message_caption(caption="Series edited!", reply_markup=None)
+    else:
+        sonarr.add_serie(serie, QUALITY_PROFILE_1080P, monitor = "skip", seasons_to_add=seasons_to_add, tags=added_tags)
+        await query.edit_message_caption(caption="Series added!", reply_markup=None)
 
     # flush all data
     context.user_data["series"].clear()
     context.user_data.pop("seasons to add")
     context.user_data.pop("series_selected_index")
-
-    #Done! 
-    await query.edit_message_caption(caption="Series added!", reply_markup=None)
 
 # series handler
 series_conv_handler = ConversationHandler(
