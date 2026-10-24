@@ -1,17 +1,12 @@
 from sonarr import SonarrClient
 from radarr import RadarrClient
 from telegram.ext import ApplicationBuilder
-from handlers import (
+from handlers.movies import (
     movie_conv_handler,
-    start_handler,
-    help_handler,
-    unknown_handler,
     movie_button_handler,
-    list_users_handler,
-    claim_owner_handler,
-    set_role_handler,
-    edit_quota_handler,
-    notif_handler,
+    notif_handler
+)
+from handlers.series import (
     series_conv_handler,
     series_browse_button,
     series_select_callback,
@@ -19,6 +14,15 @@ from handlers import (
     series_cancel,
     series_special,
     series_add_specific_seasons,
+)
+from handlers.misc import (
+    start_handler,
+    help_handler,
+    unknown_handler,
+    list_users_handler,
+    claim_owner_handler,
+    set_role_handler,
+    edit_quota_handler,
     error_handler,
 )
 from constants import (
@@ -42,22 +46,22 @@ if __name__ == "__main__":
     print("starting worlds most awesome bot :) ")
     print("Building application....")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-    print("done\n")
+    print("building done")
 
     print(f"connecting to radarr at: {RADARR_HOST}:{RADARR_PORT}")
     application.bot_data["radarrClient"] = RadarrClient(API_key=RADARR_API_KEY, host=RADARR_HOST, port=RADARR_PORT)
-    print("done\n")
+    print("Radarr connected")
 
     print(f"connecting to sonarr at: {SONARR_HOST}:{SONARR_PORT}")
     application.bot_data["sonarrClient"] = SonarrClient(API_key=SONARR_API_KEY, host=SONARR_HOST, port=SONARR_PORT)
-    print("done\n")
+    print("Sonarr connected")
 
     print("Adding default users...")
     application.bot_data["users"] = DEFAULT_USERS
     if owner_id:
         print("Adding owner")
         application.bot_data["owner"] = owner_id
-    print("done")
+    print("default users added")
 
     print("adding handlers....")
     application.add_handler(movie_conv_handler)
