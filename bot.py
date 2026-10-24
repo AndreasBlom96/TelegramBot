@@ -40,15 +40,15 @@ for user in DEFAULT_USERS.keys():
 
 if __name__ == "__main__":
     print("starting worlds most awesome bot :) ")
-    print("Builing application....")
+    print("Building application....")
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     print("done\n")
 
-    print("connecting to radarr...")
+    print(f"connecting to radarr at: {RADARR_HOST}:{RADARR_PORT}")
     application.bot_data["radarrClient"] = RadarrClient(API_key=RADARR_API_KEY, host=RADARR_HOST, port=RADARR_PORT)
     print("done\n")
 
-    print("connecting to sonarr...")
+    print(f"connecting to sonarr at: {SONARR_HOST}:{SONARR_PORT}")
     application.bot_data["sonarrClient"] = SonarrClient(API_key=SONARR_API_KEY, host=SONARR_HOST, port=SONARR_PORT)
     print("done\n")
 
