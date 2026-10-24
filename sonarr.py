@@ -48,7 +48,7 @@ class SonarrClient:
     def ping(self) -> bool:
         """Ping sonarr"""
         url = self.base_url.rsplit("/",2)[0]
-        response = requests.get(url,timeout=5)
+        response = requests.get(f"{url}/ping",timeout=5)
         return response.status_code
 
     def _get(self, endpoint: str, params=None):
