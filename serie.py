@@ -56,6 +56,15 @@ class SerieManager:
         for s, season in enumerate(seasons,1):
             season["monitored"] = s in seasons_to_monitor
 
+    def get_monitored_seasons(self) -> list:
+        """Returns addOptions monitoring status"""
+        added_seasons = []
+        if "seasons" in self.resource:
+            for s, season in enumerate(self.resource["seasons"]):
+                if season["monitored"] == True:
+                    added_seasons.append(s)
+        return added_seasons
+
     def number_of_seasons(self) -> int:
         """Return number of seasons"""
         return self.resource["statistics"]["seasonCount"]

@@ -77,7 +77,7 @@ if __name__ == "__main__":
     application.add_handler(set_role_handler)
     application.add_handler(edit_quota_handler)
     application.add_handler(notif_handler)
-    application.add_error_handler(error_handler)
+    #application.add_error_handler(error_handler)
 
     application.add_handler(unknown_handler)
     print("done! \nBot is now running")

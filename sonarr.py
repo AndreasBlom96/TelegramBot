@@ -201,6 +201,41 @@ class SonarrClient:
         
         return self._post("/series", payload)
 
+    def edit_series(self, 
+                    serie: SerieManager,
+                    monitor: str | None = None,
+                    seasons_to_add: list | None = None
+                    ):
+        """Update monitoring of a series"""
+
+        logger.info(f"editing serie: {serie.resource["title"]}")
+
+        payload = {}
+        payload["series"] = []
+        series_id = serie.resource["id"]
+        series_to_edit = {
+            "id": series_id,
+            "monitored": True
+            }
+
+        if monitor is not None:
+            payload["monitoringOptions"] = {
+                        "monitor": monitor,
+                    }
+
+        if seasons_to_add is not None:
+            season_setting = []
+            for season in serie.resource["seasons"]:
+                season_to_append = {
+                    "seasonNumber": season["seasonNumber"],
+                    "monitored": season["seasonNumber"] in seasons_to_add
+                }
+                season_setting.append(season_to_append)
+            series_to_edit["seasons"] = season_setting
+            
+        payload["series"].append(series_to_edit)
+        return self._post(f"/seasonPass", data=payload)
+
     def add_tag_serie(self, series_id: int, tagId: int = None):
         """adds tag to serie"""
 
