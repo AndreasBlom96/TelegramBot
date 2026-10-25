@@ -7,6 +7,7 @@ DEFAULT_PHOTO = "https://w7.pngwing.com/pngs/116/765/png-transparent-clapperboar
 
 # config variables
 load_dotenv(dotenv_path="config.env")
+
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 SONARR_API_KEY = os.getenv('SONARR_API_KEY')
@@ -34,7 +35,8 @@ if owner_string:
                 "username": None,
                 "name": owner_name,
                 "quota": DEFAULT_QUOTA,
-                "notif": True,
+                "notif_movie": True,
+                "notif_series": True,
                 "allowedSeries": True
                 })
 
@@ -58,6 +60,7 @@ for id, name in admins:
             "username": None,
             "name": name,
             "quota": DEFAULT_QUOTA,
-            "notif": True,
+            "notif_movie": True,
+            "notif_series": True,
             "allowedSeries": True
             })

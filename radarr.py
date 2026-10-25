@@ -328,6 +328,6 @@ if __name__ == "__main__":
     r = RadarrClient(host=RADARR_HOST, port=RADARR_PORT)
     resp = r.search_movie("Interstellar")
     movie = resp[0]
-    print(movie.keys())
-    r.add_movie(movie["title"], 4, movie["tmdbId"], r.rootFolder, tags=[0])
-    notifs = r.get_telegram_notifications()
+    id = movie["tmdbId"]
+    #print(movie)
+    print(r.movie_status(id))

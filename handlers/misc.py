@@ -17,7 +17,7 @@ import logging
 from user_manager import UserManager
 from constants import BOT_TOKEN, DEFAULT_QUOTA, DEFAULT_PHOTO, QUALITY_PROFILE_1080P
 from helpers import(
-    add_notification,
+    radarr_add_notification,
 )
 
 # Logging
@@ -83,7 +83,7 @@ async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Name: {user['name']}, "
         f"Role: {user['role']}, "
         f"Quota: {user['quota']}, "
-        f"Notif: {user['notif']}\n"
+        f"Notif_movie: {user['notif_movie']}\n"
         for user_id, user in users.items()
     ) 
 
@@ -114,7 +114,7 @@ async def claim_owner(update: Update, context: ContextTypes.DEFAULT_TYPE):
     extra_dict.setdefault("onHealthIssue", True)
     extra_dict.setdefault("onHealthRestored", True)
     extra_dict.setdefault("includeHealthWarnings", True)
-    add_notification(update, context, extra=extra_dict)
+    radarr_add_notification(update, context, extra=extra_dict)
 
 async def set_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Changes role of a users"""
