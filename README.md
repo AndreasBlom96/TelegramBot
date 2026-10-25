@@ -6,11 +6,11 @@ A Telegram bot that integrates with **Radarr** to let users search and add movie
 ---
 
 ## Features
-- Search for movies via TMDb
-- Add movies to Radarr from Telegram
+- Search for movies and series
+- Add movies and series to Radarr or Sonarr from Telegram
 - Role management — owner, admin, user
 - Weekly quotas for users
-- Built using `python-telegram-bot`, `Radarr API` and `Sonarr API`
+- Built using `python-telegram-bot`, `Requests`
 
 ---
 
