@@ -51,7 +51,7 @@ class SonarrClient:
         response = requests.get(f"{url}/ping",timeout=5)
         return response.status_code
 
-    def _get(self, endpoint: str, params=None):
+    def _get(self, endpoint: str, params=None) -> dict:
         """request get method that is safe and catches most errors"""
 
         try:
@@ -267,8 +267,10 @@ class SonarrClient:
         """Get list of notifications"""
         return self._get("/notification")
       
-    def add_telegram_notification(self, name: str, botToken: str, chatId: str, tagId: int = None, extra=None):
-        """Adds a telegram notification, returns None if the Name already exists"""
+    def add_telegram_notification(self, name: str, botToken: str, chatId: str,
+                                  tagId: int | None = None,
+                                  extra=None):
+        """Adds a telegram notification, edits notification if the notification already exists"""
         endpoint = "/notification"
 
         if tagId is None:
@@ -279,6 +281,7 @@ class SonarrClient:
         body = {
             "configContract": "TelegramSettings",
             "implementation": "Telegram",
+            "implementationName": "Telegram",
             "name": name,
             "fields": [
                 {"name": "botToken", "value": botToken},
@@ -325,7 +328,7 @@ class SonarrClient:
         endpoint = f"/notification/{id}"
         return self._delete(endpoint)
 
-    def edit_telegram_notification(self, id: int, name: str = None, data=None):
+    def edit_telegram_notification(self, id: int, name: str | None = None, data=None):
         """edits a telegram notification by name or id. Data should be dict with changed values"""
         if (id is None) and name is not None:
             notif = self.get_notification_by_name(name)

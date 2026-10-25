@@ -22,7 +22,7 @@ from constants import BOT_TOKEN, DEFAULT_QUOTA, DEFAULT_PHOTO, QUALITY_PROFILE_1
 from helpers import(
     get_user,
     get_tag,
-    add_notification,
+    radarr_add_notification,
     ping_radarr,
 )
 
@@ -134,12 +134,15 @@ async def movie_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # check if user is new
+    tag = get_tag(update, context)
     if user.id not in users:
-        #user doesnt exist
         user.add_user()
-        tag = get_tag(update, context)
-        onDownload = context.bot_data["users"][user.id]["notif"]
-        add_notification(update, context, tag["id"], extra={"onDownload": onDownload})
+
+    #add notif if it dosnt exist
+    radarr = context.bot_data["radarrClient"]#type: RadarrClient
+    if radarr.get_notification_by_name(tag["label"]):
+        onDownload = context.bot_data["users"][user.id]["notif_movie"]
+        radarr_add_notification(update, context, tag["id"], extra={"onDownload": onDownload})
 
     # check quotas
     if await user.met_quota() and user.get_role() == "user":
@@ -242,7 +245,7 @@ async def notif(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = get_user(update)
     users = context.bot_data["users"]
     radarr = context.bot_data["radarrClient"] # type: RadarrClient
-    current_onDOwnload = users[manager.id]["notif"]
+    current_onDOwnload = users[manager.id]["notif_movie"]
     logger.info(f"{user.first_name} called notif with args: {context.args}")
 
     args = context.args
@@ -263,11 +266,11 @@ async def notif(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     #else edit notification
-    users[manager.id]["notif"] = onDownload
+    users[manager.id]["notif_movie"] = onDownload
     name = user.first_name.lower() + ":" + str(user.id)
     logger.info(f"notif changes to {onDownload}")
     await update.message.reply_html(text=f"Notifications changed to {onDownload}")
-    radarr.edit_telegram_notification(id=None, name=name, data={"onDownload": onDownload} )
+    radarr.edit_telegram_notification(id=None, name=name, data={"onDownload": onDownload})
     return
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):

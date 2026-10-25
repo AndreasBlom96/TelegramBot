@@ -19,8 +19,7 @@ def get_user(update: Update):
     elif update.callback_query:
         return update.callback_query.from_user
 
-
-def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE, get_sonar: bool=False):
+def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE, get_sonar: bool=False) -> dict:
     """adds user tag to movie"""
     logger.debug("Getting tag...")
 
@@ -35,9 +34,9 @@ def get_tag(update: Update, context: ContextTypes.DEFAULT_TYPE, get_sonar: bool=
         radarr = context.bot_data["radarrClient"] # type: RadarrClient
         return radarr.post_tag(label)
 
-
-def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
-                     tagId: int = None, extra = None):
+def radarr_add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                     tagId: int | None = None,
+                     extra = None):
     """Adds notifications to radarr"""
     radarr = context.bot_data["radarrClient"] #type: RadarrClient
     user = get_user(update)
@@ -51,9 +50,25 @@ def add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
         extra=extra
      )
 
+def sonarr_add_notification(update: Update, context: ContextTypes.DEFAULT_TYPE,
+                            tagId: int | None = None,
+                            extra: dict | None = None):
+    """Adds or edits a sonarrr telegam notification"""
+    sonarr = context.bot_data["sonarrClient"] #type: SonarrClient
+    user = get_user(update)
+    chatId = str(update.effective_chat.id).lower()
+    name = user.first_name.lower() + ":" + str(user.id)
+    return sonarr.add_telegram_notification(
+        name,
+        botToken=BOT_TOKEN,
+        chatId=chatId,
+        tagId=tagId,
+        extra=extra
+    )
+
 def ping_sonarr(context: ContextTypes.DEFAULT_TYPE) -> bool:
     """See if sonarr is alive"""
-    sonarr = context.bot_data["sonarrClient"]
+    sonarr = context.bot_data["sonarrClient"] #type: SonarrClient
     return sonarr.ping()==200
 
 def ping_radarr(context: ContextTypes.DEFAULT_TYPE) -> bool:

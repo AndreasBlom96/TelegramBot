@@ -22,6 +22,7 @@ from helpers import(
     get_user,
     get_tag,
     ping_sonarr,
+    sonarr_add_notification,
 )
 
 # Logging
@@ -67,11 +68,16 @@ async def series_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # check if user is new
+    tag = get_tag(update, context, get_sonar=True)
     if user.id not in users:
-        #user doesnt exist
         user.add_user()
-        tag = get_tag(update, context, set_sonar=True)
-        #Fix sonarr notification here
+        
+    #Fix sonarr notification here
+    sonarr = context.bot_data["sonarrClient"] # type: SonarrClient
+    if not sonarr.get_notification_by_name(tag["label"]):
+        logger.info(f"Adding notificatione for {user.user.first_name}")
+        onDownload = context.bot_data["users"][user.id]["notif_series"]
+        sonarr_add_notification(update, context, tag["id"], extra={"onDownload": onDownload})
 
     #Implement check to see if user is allowed to here
     allowed_series = users.get(user.id).get("allowedSeries", False)
