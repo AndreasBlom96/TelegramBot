@@ -38,6 +38,7 @@ pip install -r requirements.txt
 
 # Create config.env
 cp exampleConfig.env config.env (make sure constant.py points to correct config.env file)
+#edit you config files with tokens and api keys
 
 # Run bot!
 python bot.py
@@ -53,6 +54,7 @@ python bot.py
 - /claim --	Claim bot ownership
 - /set_role (user_id) (role) --	Change a users role
 - /edit_quota (user_id) (quota) -- change a users quota
+- /notif (on/off) -- turns notifications on/off
 
 ---
 
@@ -61,6 +63,5 @@ python bot.py
 - add commands:
   - /status
   - set series allowed for users
-- add more functionality with notifications
-- Notifications for sonarr is not implemented
-- Sonarr edit series monitoring
+  - fix /notif so that it works for series also
+- notifications might be a little wonky. not sure
